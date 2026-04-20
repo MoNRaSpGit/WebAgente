@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ClipboardList, House, LogOut, ShoppingCart, UserRound } from 'lucide-react';
 import { CatalogFeature } from '../../features/catalog/CatalogFeature.jsx';
 import { InactiveProductsFeature } from '../../features/catalog/InactiveProductsFeature.jsx';
+import { CartFeature } from '../../features/orders/CartFeature.jsx';
 import { MyOrdersFeature } from '../../features/orders/MyOrdersFeature.jsx';
 import { fetchWebCategories, fetchWebInactiveProducts, fetchWebProducts } from '../../shared/api/productsApi.js';
 import { createWebOrder, fetchMyWebOrders } from '../../shared/api/webOrdersApi.js';
@@ -9,6 +11,17 @@ import { useWebAuth } from '../../shared/auth/WebAuthProvider.jsx';
 
 const WEB_PRODUCTS_PAGE_LIMIT = 500;
 const WEB_INACTIVE_PRODUCTS_PAGE_LIMIT = 200;
+const CATEGORY_ALL = 'all';
+const CATEGORY_OTHER = '__other__';
+
+function normalizeSearchText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 export function HomeFeature() {
   const { profile, user, token, logout } = useWebAuth();
@@ -27,7 +40,7 @@ export function HomeFeature() {
   const [cartItems, setCartItems] = useState({});
   const [activeView, setActiveView] = useState('catalog');
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState(CATEGORY_ALL);
   const [lastFetchMs, setLastFetchMs] = useState(0);
   const [inactiveProducts, setInactiveProducts] = useState([]);
   const [inactiveOffset, setInactiveOffset] = useState(0);
@@ -36,25 +49,35 @@ export function HomeFeature() {
   const [inactiveLoadingMore, setInactiveLoadingMore] = useState(false);
   const [inactiveError, setInactiveError] = useState('');
   const [knownCategories, setKnownCategories] = useState([]);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const loadMoreSentinelRef = useRef(null);
   const loadNextPageRef = useRef(null);
+  const userMenuRef = useRef(null);
   const hasBootstrappedRef = useRef(false);
   const skipFirstCategoryReloadRef = useRef(true);
   const productCacheByCategoryRef = useRef(new Map());
 
   const cartList = Object.values(cartItems);
-  const normalizedSearch = useMemo(() => searchTerm.trim().toLowerCase(), [searchTerm]);
+  const normalizedSearch = useMemo(() => normalizeSearchText(searchTerm), [searchTerm]);
+  const searchTokens = useMemo(
+    () => normalizedSearch.split(' ').map((part) => part.trim()).filter(Boolean),
+    [normalizedSearch]
+  );
   const normalizedActiveCategory = useMemo(
-    () => (activeCategory === 'all'
+    () => (activeCategory === CATEGORY_ALL || activeCategory === CATEGORY_OTHER
       ? ''
       : String(activeCategory || '').toLowerCase().replace(/\s+/g, ' ').trim()),
     [activeCategory]
   );
 
-  const categories = useMemo(() => ['all', ...knownCategories], [knownCategories]);
+  const knownCategoriesNormalized = useMemo(
+    () => new Set(knownCategories.map((item) => String(item || '').toLowerCase().replace(/\s+/g, ' ').trim()).filter(Boolean)),
+    [knownCategories]
+  );
+  const categories = useMemo(() => [CATEGORY_ALL, ...knownCategories, CATEGORY_OTHER], [knownCategories]);
   const filteredProducts = useMemo(() => {
-    const activeCategoryNormalized = activeCategory === 'all'
-      ? 'all'
+    const activeCategoryNormalized = activeCategory === CATEGORY_ALL
+      ? CATEGORY_ALL
       : String(activeCategory || '').toLowerCase().replace(/\s+/g, ' ').trim();
 
     return products.filter((item) => {
@@ -63,7 +86,12 @@ export function HomeFeature() {
         .replace(/\s+/g, ' ')
         .trim();
 
-      if (activeCategoryNormalized !== 'all' && itemCategoryNormalized !== activeCategoryNormalized) {
+      if (activeCategoryNormalized === CATEGORY_OTHER) {
+        const isOther = !itemCategoryNormalized || !knownCategoriesNormalized.has(itemCategoryNormalized);
+        if (!isOther) {
+          return false;
+        }
+      } else if (activeCategoryNormalized !== CATEGORY_ALL && itemCategoryNormalized !== activeCategoryNormalized) {
         return false;
       }
 
@@ -71,11 +99,13 @@ export function HomeFeature() {
         return true;
       }
 
-      const name = String(item.nombre || '').toLowerCase();
-      const category = String(item.categoria || '').toLowerCase();
-      return name.includes(normalizedSearch) || category.includes(normalizedSearch);
+      const name = normalizeSearchText(item.nombre);
+      const category = normalizeSearchText(item.categoria);
+      const haystack = `${name} ${category}`.trim();
+
+      return searchTokens.every((token) => haystack.includes(token));
     });
-  }, [activeCategory, normalizedSearch, products]);
+  }, [activeCategory, knownCategoriesNormalized, normalizedSearch, products, searchTokens]);
   const visibleProducts = useMemo(
     () => filteredProducts.slice(0, visibleProductsCount),
     [filteredProducts, visibleProductsCount]
@@ -86,6 +116,8 @@ export function HomeFeature() {
     (sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0),
     0
   );
+  const cartCount = cartList.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const isAdmin = String(user?.role || '').toLowerCase() === 'admin';
 
   const loadInactiveProductsPage = useCallback(async ({ reset = false, silent = false } = {}) => {
     if (!reset && (!inactiveHasMore || inactiveLoadingMore)) {
@@ -305,7 +337,7 @@ export function HomeFeature() {
 
   useEffect(() => {
     if (!categories.includes(activeCategory)) {
-      setActiveCategory('all');
+      setActiveCategory(CATEGORY_ALL);
     }
   }, [activeCategory, categories]);
 
@@ -370,6 +402,18 @@ export function HomeFeature() {
 
     return undefined;
   }, [activeView, loadInactiveProductsPage]);
+
+  useEffect(() => {
+    function handleWindowClick(event) {
+      if (!userMenuRef.current || userMenuRef.current.contains(event.target)) {
+        return;
+      }
+      setUserMenuOpen(false);
+    }
+
+    window.addEventListener('click', handleWindowClick);
+    return () => window.removeEventListener('click', handleWindowClick);
+  }, []);
 
   function increaseProduct(product) {
     setCartItems((current) => {
@@ -454,38 +498,85 @@ export function HomeFeature() {
   return (
     <main className="home-shell">
       <section className="home-card home-card--wide">
-        <nav className="classic-nav">
-          <button
-            type="button"
-            className={activeView === 'catalog' ? 'classic-nav-active' : ''}
-            onClick={() => setActiveView('catalog')}
-          >
-            Productos
-          </button>
-          <button
-            type="button"
-            className={activeView === 'update' ? 'classic-nav-active' : ''}
-            onClick={() => setActiveView('update')}
-          >
-            Actualizar
-          </button>
-        </nav>
+        <header className="home-topbar">
+          <div className="home-topbar-brand">
+            <span className="store-brand-logo">WP</span>
+            <div>
+              <strong>Web Piloto</strong>
+              <span className="store-brand-user">{user?.nombre || user?.email}</span>
+            </div>
+          </div>
+
+          <nav className="home-desktop-nav">
+            <button
+              type="button"
+              className={activeView === 'catalog' ? 'home-desktop-nav-active' : ''}
+              onClick={() => setActiveView('catalog')}
+            >
+              Inicio
+            </button>
+            <button
+              type="button"
+              className={activeView === 'cart' ? 'home-desktop-nav-active' : ''}
+              onClick={() => setActiveView('cart')}
+            >
+              Carrito ({cartCount})
+            </button>
+            <button
+              type="button"
+              className={activeView === 'orders' ? 'home-desktop-nav-active' : ''}
+              onClick={() => setActiveView('orders')}
+            >
+              Mis pedidos
+            </button>
+            {isAdmin ? (
+              <button
+                type="button"
+                className={activeView === 'update' ? 'home-desktop-nav-active' : ''}
+                onClick={() => setActiveView('update')}
+              >
+                Actualizar
+              </button>
+            ) : null}
+          </nav>
+
+          <div className="home-user-menu" ref={userMenuRef}>
+            <button
+              type="button"
+              className="home-user-trigger"
+              onClick={() => setUserMenuOpen((current) => !current)}
+              aria-label="Abrir menu de usuario"
+            >
+              <UserRound size={18} />
+            </button>
+            {userMenuOpen ? (
+              <div className="home-user-dropdown">
+                <p>{user?.nombre || 'Usuario'}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserMenuOpen(false);
+                    logout();
+                  }}
+                >
+                  <LogOut size={14} />
+                  Salir de la web
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </header>
 
         {activeView === 'catalog' ? (
           <CatalogFeature
-            userName={user?.nombre || user?.email}
             products={visibleProducts}
             productsTotal={filteredProducts.length}
             loading={loading}
             loadingMore={productsLoadingMore}
             error={error}
             orderSuccess={orderSuccess}
-            cartList={cartList}
-            cartCount={cartList.reduce((sum, item) => sum + Number(item.quantity || 0), 0)}
-            cartTotal={cartTotal}
-            orderNote={orderNote}
+            cartCount={cartCount}
             skeletonCount={skeletonCount}
-            savingOrder={savingOrder}
             searchValue={searchTerm}
             categories={categories}
             activeCategory={activeCategory}
@@ -494,13 +585,21 @@ export function HomeFeature() {
             lastFetchMs={lastFetchMs}
             onSearchChange={setSearchTerm}
             onSelectCategory={setActiveCategory}
+            onIncreaseProduct={increaseProduct}
+            loadMoreSentinelRef={loadMoreSentinelRef}
+          />
+        ) : null}
+
+        {activeView === 'cart' ? (
+          <CartFeature
+            items={cartList}
+            total={cartTotal}
+            orderNote={orderNote}
+            savingOrder={savingOrder}
             onOrderNoteChange={setOrderNote}
             onIncreaseProduct={increaseProduct}
             onDecreaseProduct={decreaseProduct}
             onSubmitOrder={submitOrder}
-            onOpenOrders={() => setActiveView('orders')}
-            onLogout={logout}
-            loadMoreSentinelRef={loadMoreSentinelRef}
           />
         ) : null}
 
@@ -526,6 +625,35 @@ export function HomeFeature() {
           />
         ) : null}
 
+        <nav className="mobile-bottom-nav">
+          <button
+            type="button"
+            className={activeView === 'catalog' ? 'mobile-bottom-nav-active' : ''}
+            onClick={() => setActiveView('catalog')}
+          >
+            <House size={18} />
+            <span>Inicio</span>
+          </button>
+          <button
+            type="button"
+            className={activeView === 'cart' ? 'mobile-bottom-nav-active' : ''}
+            onClick={() => setActiveView('cart')}
+          >
+            <ShoppingCart size={18} />
+            <span>
+              Carrito
+              {cartCount > 0 ? <small className="mobile-nav-badge">{cartCount}</small> : null}
+            </span>
+          </button>
+          <button
+            type="button"
+            className={activeView === 'orders' ? 'mobile-bottom-nav-active' : ''}
+            onClick={() => setActiveView('orders')}
+          >
+            <ClipboardList size={18} />
+            <span>Mis pedidos</span>
+          </button>
+        </nav>
       </section>
     </main>
   );

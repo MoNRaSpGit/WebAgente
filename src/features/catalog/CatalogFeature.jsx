@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
+import { buildWebProductImageSrc } from '../../shared/api/productsApi.js';
 
 function ProductImage({ product, eager = false }) {
   const hasImage = Boolean(product?.has_local_image);
-  const imageUrl = String(product?.image_local_url || '').trim();
+  const imageUrl = hasImage ? buildWebProductImageSrc(product?.id) : '';
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [resolvedSrc, setResolvedSrc] = useState('');

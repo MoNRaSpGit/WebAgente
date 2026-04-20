@@ -220,12 +220,11 @@ export function HomeFeature() {
 
     async function loadData() {
       try {
-        const [productsResult, orders, profileData, categoriesData] = await Promise.all([
-          fetchWebProducts({ limit: WEB_PRODUCTS_PAGE_LIMIT, offset: 0, category: '' }),
-          fetchMyWebOrders(token, 20),
-          fetchMyWebProfile(token),
-          fetchWebCategories({ status: 'activo' })
-        ]);
+        const productsResult = await fetchWebProducts({
+          limit: WEB_PRODUCTS_PAGE_LIMIT,
+          offset: 0,
+          category: ''
+        });
 
         if (mounted) {
           setProducts(productsResult.items);
@@ -236,19 +235,29 @@ export function HomeFeature() {
             offset: productsResult.items.length,
             hasMore: Boolean(productsResult.page?.has_more)
           });
-          setKnownCategories([...categoriesData].sort((a, b) => a.localeCompare(b)));
           setVisibleProductsCount(9);
-          setMyOrders(orders);
-          setMyProfile(profileData);
           setError('');
           hasBootstrappedRef.current = true;
+          setLoading(false);
         }
+
+        Promise.all([
+          fetchWebCategories({ status: 'activo' }),
+          fetchMyWebOrders(token, 20),
+          fetchMyWebProfile(token)
+        ])
+          .then(([categoriesData, orders, profileData]) => {
+            if (!mounted) {
+              return;
+            }
+            setKnownCategories([...categoriesData].sort((a, b) => a.localeCompare(b)));
+            setMyOrders(orders);
+            setMyProfile(profileData);
+          })
+          .catch(() => {});
       } catch (loadError) {
         if (mounted) {
           setError(loadError.message);
-        }
-      } finally {
-        if (mounted) {
           setLoading(false);
         }
       }
@@ -420,6 +429,7 @@ export function HomeFeature() {
       const key = String(product.id);
       const existing = current[key];
       const quantity = existing ? existing.quantity + 1 : 1;
+      const hasLocalImage = Boolean(existing?.has_local_image || product.has_local_image);
 
       return {
         ...current,
@@ -427,7 +437,8 @@ export function HomeFeature() {
           product_id: Number(product.id),
           product_name: product.nombre,
           unit_price: Number(product.precio_venta || 0),
-          quantity
+          quantity,
+          has_local_image: hasLocalImage
         }
       };
     });
@@ -477,13 +488,29 @@ export function HomeFeature() {
       };
 
       const result = await createWebOrder(token, payload);
-      const [refreshedOrders, refreshedProfile] = await Promise.all([
-        fetchMyWebOrders(token, 20),
-        fetchMyWebProfile(token)
-      ]);
+      const createdOrder = result?.item || null;
+      const awardedPoints = Number(result?.meta?.awarded_points || 0);
+      const orderTotal = Number(result?.meta?.order_total || createdOrder?.total_estimado || 0);
 
-      setMyOrders(refreshedOrders);
-      setMyProfile(refreshedProfile);
+      if (createdOrder) {
+        setMyOrders((current) => [createdOrder, ...current].slice(0, 20));
+      }
+
+      setMyProfile((current) => {
+        if (!current) {
+          return current;
+        }
+
+        return {
+          ...current,
+          total_compras: Number(current.total_compras || 0) + 1,
+          monto_total_compras: Number((Number(current.monto_total_compras || 0) + orderTotal).toFixed(2)),
+          puntos_actuales: Number(current.puntos_actuales || 0) + awardedPoints,
+          puntos_acumulados: Number(current.puntos_acumulados || 0) + awardedPoints,
+          ultima_compra_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
+        };
+      });
+
       setCartItems({});
       setOrderNote('');
       setOrderSuccess(`Pedido #${result.item?.id} enviado`);
@@ -605,10 +632,6 @@ export function HomeFeature() {
 
         {activeView === 'orders' ? (
           <section className="orders-shell">
-            <div className="orders-shell-header">
-              <button type="button" onClick={() => setActiveView('catalog')}>Volver al catalogo</button>
-              <button type="button" onClick={logout}>Cerrar sesion</button>
-            </div>
             <MyOrdersFeature orders={myOrders} loading={loading} />
           </section>
         ) : null}

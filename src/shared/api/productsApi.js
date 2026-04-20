@@ -2,36 +2,12 @@ import { fetchApi, parseJson } from './apiClient.js';
 
 const DEFAULT_API_BASE = String(import.meta.env.VITE_API_URL || 'http://localhost:3000').trim();
 
-function normalizeProductImageUrl(item) {
-  const explicitUrl = String(item?.image_local_url || '').trim();
-  if (explicitUrl) {
-    return explicitUrl;
-  }
-
-  const rawPath = String(item?.image_path || '').trim();
-  if (!rawPath) {
-    if (item?.has_local_image && Number(item?.id || 0) > 0) {
-      return `${DEFAULT_API_BASE}/api/web/products/${Number(item.id)}/image`;
-    }
+export function buildWebProductImageSrc(productId) {
+  const safeId = Number(productId);
+  if (!Number.isFinite(safeId) || safeId <= 0) {
     return '';
   }
-
-  if (/^https?:\/\//i.test(rawPath)) {
-    return rawPath;
-  }
-
-  if (!rawPath.startsWith('/')) {
-    return `${DEFAULT_API_BASE}/${rawPath}`;
-  }
-
-  return `${DEFAULT_API_BASE}${rawPath}`;
-}
-
-function normalizeProducts(items) {
-  return (Array.isArray(items) ? items : []).map((item) => ({
-    ...item,
-    image_local_url: normalizeProductImageUrl(item)
-  }));
+  return `${DEFAULT_API_BASE}/api/web/products/${safeId}/image`;
 }
 
 export async function fetchWebProducts({ limit = 500, offset = 0, category = '' } = {}) {
@@ -52,7 +28,7 @@ export async function fetchWebProducts({ limit = 500, offset = 0, category = '' 
   }
 
   return {
-    items: normalizeProducts(data.items),
+    items: Array.isArray(data.items) ? data.items : [],
     page: data.page || {
       offset,
       limit,
@@ -76,7 +52,7 @@ export async function fetchWebInactiveProducts({ limit = 500, offset = 0 } = {})
   }
 
   return {
-    items: normalizeProducts(data.items),
+    items: Array.isArray(data.items) ? data.items : [],
     page: data.page || {
       offset,
       limit,

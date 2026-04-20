@@ -1,3 +1,5 @@
+import { buildWebProductImageSrc } from '../../shared/api/productsApi.js';
+
 export function InactiveProductsFeature({
   loading,
   loadingMore,
@@ -25,8 +27,13 @@ export function InactiveProductsFeature({
             {safeItems.map((product) => (
               <li key={product.id} className="product-card">
                 <div className="product-card-image-wrap">
-                  {product.image_local_url ? (
-                    <img className="product-card-image" src={product.image_local_url} alt={product.nombre} loading="lazy" />
+                  {product.has_local_image ? (
+                    <img
+                      className="product-card-image"
+                      src={buildWebProductImageSrc(product.id)}
+                      alt={product.nombre}
+                      loading="lazy"
+                    />
                   ) : (
                     <div className="product-card-image product-card-image--placeholder">Sin imagen</div>
                   )}

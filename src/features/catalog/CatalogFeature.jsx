@@ -1,3 +1,87 @@
+import { useEffect, useState } from 'react';
+
+function ProductImage({ product, eager = false }) {
+  const hasImage = Boolean(product?.has_local_image);
+  const imageUrl = String(product?.image_local_url || '').trim();
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [resolvedSrc, setResolvedSrc] = useState('');
+
+  useEffect(() => {
+    setIsLoaded(false);
+    setHasError(false);
+    setResolvedSrc('');
+  }, [imageUrl, product?.id]);
+
+  useEffect(() => {
+    if (!hasImage || !imageUrl) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    function buildAttemptUrl(baseUrl, attempt) {
+      return attempt > 0 ? `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}r=${attempt}` : baseUrl;
+    }
+
+    function loadWithRetry(attempt) {
+      const src = buildAttemptUrl(imageUrl, attempt);
+      const probe = new Image();
+
+      probe.onload = () => {
+        if (cancelled) {
+          return;
+        }
+        setResolvedSrc(src);
+        setIsLoaded(true);
+      };
+
+      probe.onerror = () => {
+        if (cancelled) {
+          return;
+        }
+        if (attempt < 2) {
+          loadWithRetry(attempt + 1);
+          return;
+        }
+        setHasError(true);
+      };
+
+      probe.src = src;
+    }
+
+    loadWithRetry(0);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasImage, imageUrl]);
+
+  if (!hasImage || hasError || !imageUrl) {
+    return (
+      <div className="product-card-image product-card-image--placeholder">
+        Sin imagen
+      </div>
+    );
+  }
+
+  return (
+    <div className="product-card-image-wrap">
+      {!isLoaded ? (
+        <div className="product-card-image product-card-image--loading skeleton-line" aria-hidden="true" />
+      ) : null}
+      <img
+        className="product-card-image"
+        src={resolvedSrc || imageUrl}
+        alt={product.nombre}
+        loading={eager ? 'eager' : 'lazy'}
+        decoding="async"
+        style={{ opacity: isLoaded ? 1 : 0 }}
+      />
+    </div>
+  );
+}
+
 export function CatalogFeature({
   userName,
   products,
@@ -17,6 +101,7 @@ export function CatalogFeature({
   activeCategory,
   points,
   totalCompras,
+  lastFetchMs,
   onSearchChange,
   onSelectCategory,
   onOrderNoteChange,
@@ -57,6 +142,7 @@ export function CatalogFeature({
         <p>Compras: {totalCompras}</p>
         <p>Productos: {productsTotal}</p>
         <p>Carrito: {cartCount}</p>
+        <p>Fetch: {Number(lastFetchMs || 0)} ms</p>
       </section>
 
       <section className="store-categories">
@@ -72,7 +158,6 @@ export function CatalogFeature({
         ))}
       </section>
 
-      {loading ? <p>Cargando productos...</p> : null}
       {error ? <p className="home-error">{error}</p> : null}
       {orderSuccess ? <p className="home-success">{orderSuccess}</p> : null}
 
@@ -121,15 +206,9 @@ export function CatalogFeature({
       {!loading && !error ? (
         <>
           <ul className="products-grid">
-            {products.map((product) => (
+            {products.map((product, index) => (
               <li key={product.id} className="product-card">
-                <div className="product-card-image-wrap">
-                  {product.image_local_url ? (
-                    <img className="product-card-image" src={product.image_local_url} alt={product.nombre} loading="lazy" />
-                  ) : (
-                    <div className="product-card-image product-card-image--placeholder">Sin imagen</div>
-                  )}
-                </div>
+                <ProductImage product={product} eager={index < 12} />
                 <strong className="product-card-name">{product.nombre}</strong>
                 <span className="product-card-price">${Number(product.precio_venta || 0).toFixed(2)}</span>
                 <button type="button" className="product-card-add" onClick={() => onIncreaseProduct(product)}>
@@ -153,7 +232,7 @@ export function CatalogFeature({
           ) : null}
 
           <div ref={loadMoreSentinelRef} className="products-load-sentinel" />
-          {loadingMore ? <p>Cargando mas productos...</p> : null}
+          {loadingMore ? <p className="sr-only">Cargando mas productos</p> : null}
         </>
       ) : null}
     </>

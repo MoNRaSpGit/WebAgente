@@ -34,3 +34,74 @@ npm run deploy
 URL esperada:
 
 `https://monraspgit.github.io/WebAgente/`
+
+## Metodo para aumentar la velocidad de productos
+
+Objetivo: render rapido, payload liviano e imagenes bajo demanda.
+
+1. Listado sin blob de imagen:
+- En `/api/web/products` se devuelven metadatos livianos y `has_local_image`.
+- No se incluye la imagen pesada dentro del JSON del listado.
+
+2. Endpoint separado de imagen:
+- `GET /api/web/products/:productId/image`
+- La imagen se pide solo cuando el producto la necesita.
+
+3. Lazy load por viewport:
+- El frontend renderiza primero nombre/precio.
+- La imagen se carga al entrar en viewport (`IntersectionObserver`).
+
+4. Cache de imagen:
+- Cache HTTP en backend con `Cache-Control`.
+- Cache en frontend para no pedir la misma imagen repetidamente.
+
+5. Categorias separadas:
+- `GET /api/web/categories` para cargar filtros rapido, sin depender del listado.
+
+6. Carga paralela inicial:
+- `Promise.all` para productos + categorias + perfil + pedidos.
+
+7. Paginacion grande para menos tandas:
+- Front usa `limit` alto (actualmente 500).
+- Backend permite hasta 500 por request.
+
+8. SQL optimizado:
+- Filtros index-friendly (`p.estado = ?`).
+- Indices clave en `ops_producto`:
+  - `idx_producto_estado (estado)`
+  - `idx_producto_estado_categoria_id (estado, categoria_id, id)`
+- Orden por `p.id DESC`.
+
+9. Fallo de imagen no rompe UI:
+- Si falla una imagen, se muestra fallback (`Sin imagen`) y la UI sigue fluida.
+
+## Checklist de version estable (Web + Back)
+
+Usar esta lista antes de cerrar una sesion y hacer deploy:
+
+1. Flujo de auth web:
+- Login, registro y logout funcionando.
+- `recordar credenciales` solo precompleta (no auto-login).
+
+2. Catalogo:
+- `Productos` muestra solo estado `activo`.
+- `Actualizar` muestra solo estado `inactivo`.
+- Busqueda y filtro por categoria responden rapido.
+
+3. Imagenes:
+- Se cargan desde `ops_producto.imagen` mediante endpoint:
+  `GET /api/web/products/:productId/image`.
+- Sin dependencias Cloudinary activas en el backend.
+
+4. Performance:
+- Listado sin blob en JSON (usa `has_local_image` + `image_path`).
+- Cache backend para productos/categorias activa.
+- Indices vigentes: `idx_producto_estado` y `idx_producto_estado_categoria_id`.
+
+5. Paginacion:
+- Catalogo con paginacion por `limit/offset`.
+- `Actualizar` con paginacion real y boton `Cargar mas`.
+
+6. Build y calidad minima:
+- Back: `npm run lint` OK.
+- Web: `npm run build` OK.

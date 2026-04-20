@@ -1,4 +1,5 @@
 const DEFAULT_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const IS_PROD = import.meta.env.PROD;
 
 function isLocalhostHost(hostname) {
   return hostname === 'localhost' || hostname === '127.0.0.1';
@@ -8,7 +9,7 @@ function getApiBaseCandidates() {
   const candidates = [DEFAULT_API_URL];
   const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
 
-  if (isLocalhostHost(hostname)) {
+  if (!IS_PROD && isLocalhostHost(hostname)) {
     candidates.push('http://localhost:3000');
   }
 

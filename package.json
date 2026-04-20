@@ -8,6 +8,7 @@
     "dev": "vite --port 5174",
     "build": "vite build",
     "preview": "vite preview --port 5174",
+    "test": "node --test tests/**/*.test.mjs",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },

@@ -1,7 +1,31 @@
 import { useState } from 'react';
+import { canHideOrder, normalizeOrderStatus } from './orderRealtime.js';
 
-export function MyOrdersFeature({ orders, loading }) {
+export function MyOrdersFeature({ orders, loading, onHideOrder }) {
   const [expandedOrderId, setExpandedOrderId] = useState(null);
+
+  function toOrderStatusLabel(status) {
+    const normalized = normalizeOrderStatus(status);
+    if (normalized === 'pendiente') {
+      return 'Pendiente';
+    }
+    if (normalized === 'en_proceso') {
+      return 'En proceso';
+    }
+    if (normalized === 'listo') {
+      return 'Listo';
+    }
+    if (normalized === 'entregado') {
+      return 'Entregado';
+    }
+    if (normalized === 'cobrado_en_scanner') {
+      return 'Cobrado';
+    }
+    if (normalized === 'cancelado') {
+      return 'Cancelado';
+    }
+    return normalized;
+  }
 
   function formatOrderDate(dateText) {
     const raw = String(dateText || '').trim();
@@ -40,42 +64,60 @@ export function MyOrdersFeature({ orders, loading }) {
       {!loading && orders.length === 0 ? <p>Todavia no hiciste pedidos.</p> : null}
       {!loading && orders.length > 0 ? (
         <ul className="orders-list">
-          {orders.map((order) => (
-            <li key={order.id} className="orders-item">
-              <div className="orders-item-top">
-                <button
-                  type="button"
-                  className="orders-item-main"
-                  onClick={() => setExpandedOrderId((current) => (current === order.id ? null : order.id))}
-                >
-                  <strong>Pedido</strong>
-                  <span>{formatOrderDate(order.created_at)}</span>
-                </button>
-                <button
-                  type="button"
-                  className="orders-detail-toggle"
-                  onClick={() => setExpandedOrderId((current) => (current === order.id ? null : order.id))}
-                >
-                  Detalle
-                </button>
-              </div>
-              <p className="orders-item-total">Total: ${Number(order.total_estimado || 0).toFixed(2)}</p>
+          {orders.map((order) => {
+            const normalizedStatus = normalizeOrderStatus(order.estado);
+            const hideEnabled = canHideOrder(normalizedStatus);
 
-              {expandedOrderId === order.id ? (
-                <ul className="orders-item-details">
-                  {(Array.isArray(order.items) ? order.items : []).map((item) => (
-                    <li key={`${order.id}-${item.id}`}>
-                      <span>{Number(item.quantity || 0)} x</span>
-                      <strong>{item.product_name}</strong>
-                    </li>
-                  ))}
-                  {(Array.isArray(order.items) ? order.items.length : 0) === 0 ? (
-                    <li className="orders-item-details-empty">Sin detalle disponible</li>
-                  ) : null}
-                </ul>
-              ) : null}
-            </li>
-          ))}
+            return (
+              <li key={order.id} className="orders-item">
+                <div className="orders-item-top">
+                  <button
+                    type="button"
+                    className="orders-item-main"
+                    onClick={() => setExpandedOrderId((current) => (current === order.id ? null : order.id))}
+                  >
+                    <strong>Pedido</strong>
+                    <span>{formatOrderDate(order.created_at)}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="orders-detail-toggle"
+                    onClick={() => setExpandedOrderId((current) => (current === order.id ? null : order.id))}
+                  >
+                    Detalle
+                  </button>
+                  <span className={`orders-status orders-status--${normalizedStatus}`}>
+                    {toOrderStatusLabel(order.estado)}
+                  </span>
+                  <button
+                    type="button"
+                    className="orders-hide-button"
+                    disabled={!hideEnabled}
+                    onClick={() => onHideOrder?.(order.id)}
+                    aria-label="Ocultar pedido"
+                    title={hideEnabled ? 'Eliminar pedido' : 'Solo pedidos entregados'}
+                  >
+                    ×
+                  </button>
+                </div>
+                <p className="orders-item-total">Total: ${Number(order.total_estimado || 0).toFixed(2)}</p>
+
+                {expandedOrderId === order.id ? (
+                  <ul className="orders-item-details">
+                    {(Array.isArray(order.items) ? order.items : []).map((item) => (
+                      <li key={`${order.id}-${item.id}`}>
+                        <span>{Number(item.quantity || 0)} x</span>
+                        <strong>{item.product_name}</strong>
+                      </li>
+                    ))}
+                    {(Array.isArray(order.items) ? order.items.length : 0) === 0 ? (
+                      <li className="orders-item-details-empty">Sin detalle disponible</li>
+                    ) : null}
+                  </ul>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       ) : null}
     </section>

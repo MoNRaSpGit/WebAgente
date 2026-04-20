@@ -4,8 +4,14 @@ import { CatalogFeature } from '../../features/catalog/CatalogFeature.jsx';
 import { InactiveProductsFeature } from '../../features/catalog/InactiveProductsFeature.jsx';
 import { CartFeature } from '../../features/orders/CartFeature.jsx';
 import { MyOrdersFeature } from '../../features/orders/MyOrdersFeature.jsx';
+import { applyMyWebOrderEvent } from '../../features/orders/orderRealtime.js';
 import { fetchWebCategories, fetchWebInactiveProducts, fetchWebProducts } from '../../shared/api/productsApi.js';
-import { createWebOrder, fetchMyWebOrders } from '../../shared/api/webOrdersApi.js';
+import {
+  buildMyWebOrdersStreamUrl,
+  createWebOrder,
+  fetchMyWebOrders,
+  hideMyWebOrder
+} from '../../shared/api/webOrdersApi.js';
 import { fetchMyWebProfile } from '../../shared/api/webUsersApi.js';
 import { useWebAuth } from '../../shared/auth/WebAuthProvider.jsx';
 
@@ -413,6 +419,50 @@ export function HomeFeature() {
   }, [activeView, loadInactiveProductsPage]);
 
   useEffect(() => {
+    if (activeView !== 'orders' || !token) {
+      return undefined;
+    }
+
+    async function refreshOrders() {
+      try {
+        const orders = await fetchMyWebOrders(token, 20);
+        setMyOrders(orders);
+      } catch {
+        // Silent refresh: keep UX smooth, avoid toast noise every interval.
+      }
+    }
+
+    const streamUrl = buildMyWebOrdersStreamUrl(token);
+    const eventSource = streamUrl ? new EventSource(streamUrl) : null;
+    if (eventSource) {
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data || '{}');
+          if (payload?.type === 'keepalive' || payload?.type === 'connected') {
+            return;
+          }
+          if (payload?.order || payload?.order_id) {
+            setMyOrders((current) => applyMyWebOrderEvent(current, payload));
+            return;
+          }
+        } catch (_error) {
+          // If parse fails, refresh anyway as safe fallback.
+        }
+        refreshOrders();
+      };
+      eventSource.onerror = () => {
+        // Keep best-effort behavior without user noise.
+      };
+    }
+
+    refreshOrders();
+
+    return () => {
+      eventSource?.close();
+    };
+  }, [activeView, token]);
+
+  useEffect(() => {
     function handleWindowClick(event) {
       if (!userMenuRef.current || userMenuRef.current.contains(event.target)) {
         return;
@@ -519,6 +569,20 @@ export function HomeFeature() {
       setError(submitError.message);
     } finally {
       setSavingOrder(false);
+    }
+  }
+
+  async function handleHideOrder(orderId) {
+    const parsedOrderId = Number(orderId);
+    if (!Number.isFinite(parsedOrderId) || parsedOrderId <= 0) {
+      return;
+    }
+
+    try {
+      await hideMyWebOrder(token, parsedOrderId);
+      setMyOrders((current) => current.filter((item) => Number(item.id) !== parsedOrderId));
+    } catch (hideError) {
+      setError(hideError.message || 'No se pudo ocultar el pedido');
     }
   }
 
@@ -632,7 +696,11 @@ export function HomeFeature() {
 
         {activeView === 'orders' ? (
           <section className="orders-shell">
-            <MyOrdersFeature orders={myOrders} loading={loading} />
+            <MyOrdersFeature
+              orders={myOrders}
+              loading={loading}
+              onHideOrder={handleHideOrder}
+            />
           </section>
         ) : null}
 

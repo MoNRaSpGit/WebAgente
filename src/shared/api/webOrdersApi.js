@@ -34,3 +34,30 @@ export async function fetchMyWebOrders(token, limit = 20) {
 
   return Array.isArray(data.items) ? data.items : [];
 }
+
+export async function hideMyWebOrder(token, orderId) {
+  const response = await fetchApi(`/api/web/orders/${Number(orderId)}/hide`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  const data = await parseJson(response);
+
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudo ocultar el pedido');
+  }
+
+  return data;
+}
+
+export function buildMyWebOrdersStreamUrl(token) {
+  if (!token) {
+    return '';
+  }
+
+  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  const encodedToken = encodeURIComponent(token);
+  return `${apiBaseUrl}/api/web/orders/stream?token=${encodedToken}`;
+}

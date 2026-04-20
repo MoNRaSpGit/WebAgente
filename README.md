@@ -9,12 +9,23 @@ npm install
 npm run dev
 ```
 
-## Deploy en GitHub Pages
+### Entornos (local vs produccion)
 
-1. Crear `WebAgente/.env` (opcional) con:
+- `/.env` (local):
 ```bash
+VITE_API_URL=http://localhost:3000
 VITE_GH_PAGES_BASE=/WebAgente/
 ```
+
+- `/.env.production` (GitHub Pages / produccion):
+```bash
+VITE_API_URL=https://pilotoagente.onrender.com
+VITE_GH_PAGES_BASE=/WebAgente/
+```
+
+## Deploy en GitHub Pages
+
+1. Verificar `/.env.production`.
 2. Publicar:
 ```bash
 npm run deploy

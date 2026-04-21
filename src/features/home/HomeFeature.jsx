@@ -4,7 +4,6 @@ import { InactiveProductsFeature } from '../../features/catalog/InactiveProducts
 import { CartFeature } from '../../features/orders/CartFeature.jsx';
 import { MyOrdersFeature } from '../../features/orders/MyOrdersFeature.jsx';
 import { createWebOrder, hideMyWebOrder } from '../../shared/api/webOrdersApi.js';
-import { sendWebWhatsappTest } from '../../shared/api/webNotificationsApi.js';
 import { useWebAuth } from '../../shared/auth/WebAuthProvider.jsx';
 import { HomeMobileNav } from './components/HomeMobileNav.jsx';
 import { HomeTopbar } from './components/HomeTopbar.jsx';
@@ -23,7 +22,6 @@ export function HomeFeature() {
   const [cartItems, setCartItems] = useState({});
   const [activeView, setActiveView] = useState('catalog');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [sendingWhatsappTest, setSendingWhatsappTest] = useState(false);
   const userMenuRef = useRef(null);
 
   const {
@@ -157,6 +155,7 @@ export function HomeFeature() {
       if (createdOrder) {
         setMyOrders((current) => [createdOrder, ...current].slice(0, 20));
       }
+      sendOrderToWhatsappManual(createdOrder, cartList, orderNote);
 
       setMyProfile((current) => {
         if (!current) {
@@ -196,23 +195,6 @@ export function HomeFeature() {
     }
   }
 
-  async function handleSendWhatsappTest() {
-    if (!isAdmin || !token || sendingWhatsappTest) {
-      return;
-    }
-
-    setSendingWhatsappTest(true);
-    try {
-      const result = await sendWebWhatsappTest(token, { message: 'hola desde la web' });
-      const to = String(result?.to || '');
-      window.alert(to ? `WhatsApp de prueba enviado a ${to}` : 'WhatsApp de prueba enviado');
-    } catch (sendError) {
-      setError(sendError.message || 'No se pudo enviar WhatsApp de prueba');
-    } finally {
-      setSendingWhatsappTest(false);
-    }
-  }
-
   function handleSendWhatsappManual() {
     if (!manualWhatsappTo) {
       setError('Configura VITE_WHATSAPP_MANUAL_TO en WebAgente/.env');
@@ -222,6 +204,41 @@ export function HomeFeature() {
     const message = encodeURIComponent('hola desde la web');
     const url = `https://wa.me/${manualWhatsappTo}?text=${message}`;
     window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  function sendOrderToWhatsappManual(order, items, note) {
+    if (!manualWhatsappTo || !Array.isArray(items) || items.length === 0) {
+      return;
+    }
+
+    const orderId = Number(order?.id || 0);
+    const orderLine = Number.isFinite(orderId) && orderId > 0 ? `Pedido #${orderId}` : 'Pedido web';
+    const customer = String(user?.nombre || user?.email || 'Cliente').trim();
+    const itemsText = items
+      .map((item) => `- ${Number(item.quantity || 0)} x ${String(item.product_name || 'Producto').trim()}`)
+      .join('\n');
+    const noteText = String(note || '').trim();
+
+    const lines = [
+      'Nuevo pedido web',
+      orderLine,
+      `Cliente: ${customer}`,
+      '',
+      'Detalle:',
+      itemsText
+    ];
+
+    if (noteText) {
+      lines.push('', `Nota: ${noteText}`);
+    }
+
+    const text = encodeURIComponent(lines.join('\n'));
+    const url = `https://wa.me/${manualWhatsappTo}?text=${text}`;
+    const popup = window.open(url, '_blank', 'noopener,noreferrer');
+
+    if (!popup) {
+      setError('Pedido guardado. Tu navegador bloqueo la apertura de WhatsApp.');
+    }
   }
 
   return (
@@ -238,9 +255,7 @@ export function HomeFeature() {
           onToggleUserMenu={() => setUserMenuOpen((current) => !current)}
           onCloseUserMenu={() => setUserMenuOpen(false)}
           userMenuRef={userMenuRef}
-          onSendWhatsappTest={handleSendWhatsappTest}
           onSendWhatsappManual={handleSendWhatsappManual}
-          sendingWhatsappTest={sendingWhatsappTest}
         />
 
         {activeView === 'catalog' ? (

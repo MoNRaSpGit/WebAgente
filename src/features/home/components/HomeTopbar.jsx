@@ -7,9 +7,7 @@ export function HomeTopbar({
   activeView,
   onChangeView,
   onLogout,
-  onSendWhatsappTest,
   onSendWhatsappManual,
-  sendingWhatsappTest,
   userMenuOpen,
   onToggleUserMenu,
   onCloseUserMenu,
@@ -71,29 +69,16 @@ export function HomeTopbar({
           <div className="home-user-dropdown">
             <p>{user?.nombre || 'Usuario'}</p>
             {isAdmin ? (
-              <>
-                <button
-                  type="button"
-                  className="home-user-dropdown-manual"
-                  onClick={() => {
-                    onCloseUserMenu();
-                    onSendWhatsappManual?.();
-                  }}
-                >
-                  Probar WhatsApp (manual)
-                </button>
-                <button
-                  type="button"
-                  className="home-user-dropdown-test"
-                  onClick={() => {
-                    onCloseUserMenu();
-                    onSendWhatsappTest?.();
-                  }}
-                  disabled={sendingWhatsappTest}
-                >
-                  {sendingWhatsappTest ? 'Enviando WhatsApp...' : 'Probar WhatsApp API'}
-                </button>
-              </>
+              <button
+                type="button"
+                className="home-user-dropdown-manual"
+                onClick={() => {
+                  onCloseUserMenu();
+                  onSendWhatsappManual?.();
+                }}
+              >
+                Probar WhatsApp (manual)
+              </button>
             ) : null}
             <button
               type="button"

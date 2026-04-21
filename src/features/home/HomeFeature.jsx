@@ -44,17 +44,6 @@ export function HomeFeature() {
     onBootstrapProfile: setMyProfile
   });
 
-  const {
-    inactiveProducts,
-    inactiveHasMore,
-    inactiveLoading,
-    inactiveLoadingMore,
-    inactiveError,
-    loadInactiveProductsPage
-  } = useInactiveProducts(activeView);
-
-  useMyOrdersRealtime({ activeView, token, setMyOrders });
-
   const cartList = Object.values(cartItems);
   const cartTotal = cartList.reduce(
     (sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0),
@@ -66,6 +55,16 @@ export function HomeFeature() {
     [cartItems]
   );
   const isAdmin = String(user?.role || '').toLowerCase() === 'admin';
+  const {
+    inactiveProducts,
+    inactiveHasMore,
+    inactiveLoading,
+    inactiveLoadingMore,
+    inactiveError,
+    loadInactiveProductsPage
+  } = useInactiveProducts(activeView, isAdmin);
+
+  useMyOrdersRealtime({ activeView, token, setMyOrders });
 
   useEffect(() => {
     function handleWindowClick(event) {
@@ -78,6 +77,12 @@ export function HomeFeature() {
     window.addEventListener('click', handleWindowClick);
     return () => window.removeEventListener('click', handleWindowClick);
   }, []);
+
+  useEffect(() => {
+    if (!isAdmin && activeView === 'update') {
+      setActiveView('catalog');
+    }
+  }, [activeView, isAdmin]);
 
   function increaseProduct(product) {
     setCartItems((current) => {

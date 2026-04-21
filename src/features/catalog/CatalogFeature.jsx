@@ -1,71 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { buildWebProductImageSrc } from '../../shared/api/productsApi.js';
-
-function ProductImage({ product, priority, onImageLoadError, onImageLoaded }) {
-  const hasImage = Boolean(product?.has_local_image);
-  const imageUrl = hasImage ? buildWebProductImageSrc(product?.id) : '';
-  const [attempt, setAttempt] = useState(0);
-  const [hasError, setHasError] = useState(false);
-  const retryTimeoutRef = useRef(null);
-
-  const imageSrc = useMemo(() => {
-    if (!imageUrl) {
-      return '';
-    }
-    const separator = imageUrl.includes('?') ? '&' : '?';
-    return `${imageUrl}${separator}r=${attempt}`;
-  }, [attempt, imageUrl]);
-
-  useEffect(() => {
-    setAttempt(0);
-    setHasError(false);
-  }, [imageUrl, product?.id]);
-
-  useEffect(() => () => {
-    if (retryTimeoutRef.current) {
-      window.clearTimeout(retryTimeoutRef.current);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (hasError) {
-      onImageLoadError?.(Number(product?.id || 0));
-    }
-  }, [hasError, onImageLoadError, product?.id]);
-
-  return (
-    <div className="product-card-image-wrap">
-      {hasImage && !hasError && imageSrc ? (
-        <img
-          className="product-card-image"
-          src={imageSrc}
-          alt={product.nombre}
-          loading={priority ? 'eager' : 'lazy'}
-          fetchpriority={priority ? 'high' : 'auto'}
-          decoding="async"
-          onLoad={() => {
-            setHasError(false);
-            onImageLoaded?.(Number(product?.id || 0));
-          }}
-          onError={() => {
-            if (attempt < 2) {
-              const nextAttempt = attempt + 1;
-              retryTimeoutRef.current = window.setTimeout(() => {
-                setAttempt(nextAttempt);
-              }, 120 * nextAttempt);
-              return;
-            }
-            setHasError(true);
-          }}
-        />
-      ) : (
-        <div className="product-card-image product-card-image--placeholder">
-          Sin imagen
-        </div>
-      )}
-    </div>
-  );
-}
+import { CategoryMenu } from './components/CategoryMenu.jsx';
+import { ProductImage } from './components/ProductImage.jsx';
 
 export function CatalogFeature({
   products,
@@ -88,29 +23,13 @@ export function CatalogFeature({
 }) {
   const [failedImageIds, setFailedImageIds] = useState(() => new Set());
   const [loadedImageIds, setLoadedImageIds] = useState(() => new Set());
-  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
-  const [isBebidasExpanded, setIsBebidasExpanded] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const categoryMenuRef = useRef(null);
   const toastTimeoutRef = useRef(null);
 
   useEffect(() => {
     setFailedImageIds(new Set());
     setLoadedImageIds(new Set());
   }, [activeCategory, searchValue]);
-
-  useEffect(() => {
-    function handleWindowClick(event) {
-      if (!categoryMenuRef.current || categoryMenuRef.current.contains(event.target)) {
-        return;
-      }
-      setIsCategoryMenuOpen(false);
-      setIsBebidasExpanded(false);
-    }
-
-    window.addEventListener('click', handleWindowClick);
-    return () => window.removeEventListener('click', handleWindowClick);
-  }, []);
 
   useEffect(() => () => {
     if (toastTimeoutRef.current) {
@@ -178,41 +97,6 @@ export function CatalogFeature({
     });
   }, [failedImageIds, loadedImageIds, products]);
 
-  const bebidasSubcategories = useMemo(
-    () => categories.filter((category) => {
-      const normalized = String(category || '').trim().toLowerCase();
-      return normalized === 'bebidas_con_alcohol'
-        || normalized === 'bebidas_sin_alcohol'
-        || normalized.startsWith('bebidas - ');
-    }),
-    [categories]
-  );
-
-  const primaryCategories = useMemo(
-    () => categories.filter((category) => !bebidasSubcategories.includes(category)),
-    [bebidasSubcategories, categories]
-  );
-
-  const activeCategoryLabel = useMemo(() => {
-    if (activeCategory === 'all') {
-      return 'Todas';
-    }
-    if (activeCategory === '__other__') {
-      return 'Otros';
-    }
-    return activeCategory || 'Categoria';
-  }, [activeCategory]);
-
-  function toCategoryLabel(category) {
-    if (category === 'all') {
-      return 'Todas';
-    }
-    if (category === '__other__') {
-      return 'Otros';
-    }
-    return category;
-  }
-
   function showToast(message) {
     if (toastTimeoutRef.current) {
       window.clearTimeout(toastTimeoutRef.current);
@@ -254,76 +138,15 @@ export function CatalogFeature({
         <p>Fetch: {Number(lastFetchMs || 0)} ms</p>
       </section>
 
-      <section className="store-categories">
-        <label className="store-category-select">
-          Categoria
-        </label>
-        <div className="store-category-menu" ref={categoryMenuRef}>
-          <button
-            type="button"
-            className="store-category-trigger"
-            onClick={() => setIsCategoryMenuOpen((current) => !current)}
-            aria-expanded={isCategoryMenuOpen}
-          >
-            <span>{toCategoryLabel(activeCategoryLabel)}</span>
-            <span className={`store-category-arrow ${isCategoryMenuOpen ? 'open' : ''}`}>▾</span>
-          </button>
-
-          {isCategoryMenuOpen ? (
-            <div className="store-category-panel">
-              {primaryCategories.map((category) => (
-                <button
-                  key={category}
-                  type="button"
-                  className={`store-category-option ${activeCategory === category ? 'active' : ''}`}
-                  onClick={() => {
-                    onSelectCategory(category);
-                    setIsCategoryMenuOpen(false);
-                    setIsBebidasExpanded(false);
-                  }}
-                >
-                  {toCategoryLabel(category)}
-                </button>
-              ))}
-
-              {bebidasSubcategories.length > 0 ? (
-                <div className="store-category-group">
-                  <button
-                    type="button"
-                    className={`store-category-option store-category-option--group ${isBebidasExpanded ? 'expanded' : ''}`}
-                    onClick={() => setIsBebidasExpanded((current) => !current)}
-                  >
-                    <span>Bebidas</span>
-                    <span className={`store-category-arrow ${isBebidasExpanded ? 'open' : ''}`}>▸</span>
-                  </button>
-
-                  {isBebidasExpanded ? (
-                    <div className="store-category-subgroup">
-                      {bebidasSubcategories.map((category) => (
-                        <button
-                          key={category}
-                          type="button"
-                          className={`store-category-option store-category-option--sub ${activeCategory === category ? 'active' : ''}`}
-                          onClick={() => {
-                            onSelectCategory(category);
-                            setIsCategoryMenuOpen(false);
-                            setIsBebidasExpanded(false);
-                          }}
-                        >
-                          {toCategoryLabel(category)}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      </section>
+      <CategoryMenu
+        categories={categories}
+        activeCategory={activeCategory}
+        onSelectCategory={onSelectCategory}
+      />
 
       {error ? <p className="home-error">{error}</p> : null}
       {toastMessage ? <p className="catalog-toast">{toastMessage}</p> : null}
+
       {!loading && !error ? (
         <>
           <ul className="products-grid">

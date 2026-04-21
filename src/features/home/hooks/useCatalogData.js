@@ -299,20 +299,6 @@ export function useCatalogData({
   }, [activeCategory, categories]);
 
   useEffect(() => {
-    if (activeView !== 'catalog' || !productsHasMore) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      if (loadNextPageRef.current) {
-        loadNextPageRef.current({ silent: true });
-      }
-    }, 180);
-
-    return () => window.clearTimeout(timer);
-  }, [activeView, productsHasMore, productsOffset]);
-
-  useEffect(() => {
     if (!loadMoreSentinelRef.current || activeView !== 'catalog') {
       return;
     }

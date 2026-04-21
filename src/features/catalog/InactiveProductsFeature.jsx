@@ -9,7 +9,7 @@ export function InactiveProductsFeature({
   total,
   onLoadMore
 }) {
-  const safeItems = items.filter((product) => String(product?.estado || '').trim().toLowerCase() === 'inactivo');
+  const safeItems = Array.isArray(items) ? items : [];
 
   return (
     <section className="inactive-shell">

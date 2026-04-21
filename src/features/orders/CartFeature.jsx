@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildWebProductImageSrc } from '../../shared/api/productsApi.js';
 import { Banknote, BookUser, Check, Gift, Landmark, Truck, UserRoundCheck } from 'lucide-react';
 
@@ -18,8 +18,15 @@ export function CartFeature({
   onSubmitOrder
 }) {
   const [paymentHint, setPaymentHint] = useState('');
+  const paymentHintTimeoutRef = useRef(null);
   const pointsRequired = useMemo(() => Math.ceil(Number(total || 0)), [total]);
   const hasEnoughPoints = Number(userPoints || 0) >= pointsRequired;
+
+  useEffect(() => () => {
+    if (paymentHintTimeoutRef.current) {
+      window.clearTimeout(paymentHintTimeoutRef.current);
+    }
+  }, []);
 
   const paymentOptions = [
     { key: 'pos', label: 'POS', Icon: Landmark },
@@ -35,7 +42,19 @@ export function CartFeature({
   function handleSelectPaymentMethod(key) {
     if (key === 'puntos' && !hasEnoughPoints) {
       setPaymentHint('No tiene puntos suficiente');
+      if (paymentHintTimeoutRef.current) {
+        window.clearTimeout(paymentHintTimeoutRef.current);
+      }
+      paymentHintTimeoutRef.current = window.setTimeout(() => {
+        setPaymentHint('');
+        paymentHintTimeoutRef.current = null;
+      }, 2600);
       return;
+    }
+
+    if (paymentHintTimeoutRef.current) {
+      window.clearTimeout(paymentHintTimeoutRef.current);
+      paymentHintTimeoutRef.current = null;
     }
     setPaymentHint('');
     onSelectPaymentMethod?.(key);
@@ -98,11 +117,6 @@ export function CartFeature({
 
       <section className="checkout-options-block">
         <h3 className="checkout-options-title">Tipo de pago</h3>
-        {!hasEnoughPoints ? (
-          <p className="checkout-options-hint">
-            No tiene puntos suficiente (requiere {pointsRequired}, tiene {Number(userPoints || 0)}).
-          </p>
-        ) : null}
         {paymentHint ? <p className="checkout-options-hint">{paymentHint}</p> : null}
         <div className="checkout-options-grid">
           {paymentOptions.map(({ key, label, Icon }) => {
@@ -114,6 +128,7 @@ export function CartFeature({
                 type="button"
                 className={`checkout-option ${selected ? 'checkout-option--selected' : ''} ${pointsBlocked ? 'checkout-option--blocked' : ''}`}
                 onClick={() => handleSelectPaymentMethod(key)}
+                aria-disabled={pointsBlocked}
               >
                 <span className="checkout-option-icon">
                   <Icon size={15} />
@@ -130,7 +145,7 @@ export function CartFeature({
 
       <section className="checkout-options-block">
         <h3 className="checkout-options-title">Entrega</h3>
-        {!deliveryEnabled ? (
+        {deliveryMode === 'delivery' && !deliveryEnabled ? (
           <p className="checkout-options-hint">Delivery habilitado con compra igual o mayor a $200.</p>
         ) : null}
         <div className="checkout-options-grid checkout-options-grid--two">

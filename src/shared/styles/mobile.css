@@ -131,6 +131,50 @@
     gap: 0.34rem;
   }
 
+  .store-search--catalog {
+    top: 0;
+    margin-bottom: 0.35rem;
+    padding: 0.18rem 0;
+  }
+
+  .store-search input {
+    padding: 0.46rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .store-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.24rem;
+    overflow: visible;
+    margin-bottom: 0.4rem;
+  }
+
+  .store-metrics p {
+    width: 100%;
+    text-align: center;
+    font-size: 0.66rem;
+    padding: 0.2rem 0.32rem;
+    min-width: 0;
+  }
+
+  .store-metrics p:last-child {
+    display: none;
+  }
+
+  .store-categories {
+    margin-bottom: 0.35rem;
+  }
+
+  .store-category-select {
+    font-size: 0.72rem;
+  }
+
+  .store-category-trigger {
+    padding: 0.44rem 0.52rem;
+    font-size: 0.76rem;
+  }
+
   .product-card {
     padding: 0.3rem;
   }

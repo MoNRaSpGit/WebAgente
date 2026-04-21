@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { ProductImage } from './components/ProductImage.jsx';
 
 export function CatalogV2Feature({
@@ -20,12 +21,27 @@ export function CatalogV2Feature({
   loadMoreSentinelRef
 }) {
   const [toastMessage, setToastMessage] = useState('');
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
+  const [beveragesExpanded, setBeveragesExpanded] = useState(false);
   const toastTimeoutRef = useRef(null);
+  const categoryMenuRef = useRef(null);
 
   useEffect(() => () => {
     if (toastTimeoutRef.current) {
       window.clearTimeout(toastTimeoutRef.current);
     }
+  }, []);
+
+  useEffect(() => {
+    function handleOutsideClick(event) {
+      if (!categoryMenuRef.current || categoryMenuRef.current.contains(event.target)) {
+        return;
+      }
+      setCategoryMenuOpen(false);
+    }
+
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
   }, []);
 
   function toCategoryLabel(value) {
@@ -36,6 +52,58 @@ export function CatalogV2Feature({
       return 'Otros';
     }
     return value;
+  }
+
+  function normalizeCategoryKey(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  const groupedCategories = useMemo(() => {
+    const baseCategories = categories.filter((category) => category !== 'all' && category !== '__other__');
+    const remaining = [];
+    const beveragesChildren = [];
+    let beveragesRoot = null;
+
+    for (const category of baseCategories) {
+      const key = normalizeCategoryKey(category);
+
+      if (key === 'bebidas') {
+        beveragesRoot = category;
+        continue;
+      }
+
+      if (key.startsWith('bebidas')) {
+        beveragesChildren.push(category);
+        continue;
+      }
+
+      remaining.push(category);
+    }
+
+    return {
+      remaining,
+      beveragesRoot,
+      beveragesChildren,
+      hasBeverageGroup: Boolean(beveragesRoot || beveragesChildren.length > 0)
+    };
+  }, [categories]);
+
+  useEffect(() => {
+    const isActiveOnBeverages = activeCategory === groupedCategories.beveragesRoot
+      || groupedCategories.beveragesChildren.includes(activeCategory);
+
+    if (isActiveOnBeverages) {
+      setBeveragesExpanded(true);
+    }
+  }, [activeCategory, groupedCategories.beveragesChildren, groupedCategories.beveragesRoot]);
+
+  function selectCategory(category) {
+    onSelectCategory(category);
+    setCategoryMenuOpen(false);
   }
 
   function showToast(message) {
@@ -81,21 +149,101 @@ export function CatalogV2Feature({
       </section>
 
       <section className="catalog-v2-category-wrap">
-        <label className="catalog-v2-category-label" htmlFor="catalog-v2-category">
+        <label className="catalog-v2-category-label" htmlFor="catalog-v2-category-trigger">
           Categoria
         </label>
-        <select
-          id="catalog-v2-category"
-          className="catalog-v2-category-select"
-          value={activeCategory}
-          onChange={(event) => onSelectCategory(event.target.value)}
-        >
-          {categories.map((category) => (
-            <option key={category} value={category}>
-              {toCategoryLabel(category)}
-            </option>
-          ))}
-        </select>
+        <div className="store-category-menu" ref={categoryMenuRef}>
+          <button
+            id="catalog-v2-category-trigger"
+            type="button"
+            className="store-category-trigger"
+            onClick={() => setCategoryMenuOpen((current) => !current)}
+          >
+            <span>{toCategoryLabel(activeCategory)}</span>
+            <ChevronDown size={15} className={`store-category-arrow ${categoryMenuOpen ? 'open' : ''}`} />
+          </button>
+
+          {categoryMenuOpen ? (
+            <div className="store-category-panel">
+              <button
+                type="button"
+                className={`store-category-option ${activeCategory === 'all' ? 'active' : ''}`}
+                onClick={() => selectCategory('all')}
+              >
+                Todas
+              </button>
+
+              {groupedCategories.hasBeverageGroup ? (
+                <>
+                  <button
+                    type="button"
+                    className={`store-category-option store-category-option--group ${
+                      activeCategory === groupedCategories.beveragesRoot ? 'active' : ''
+                    }`}
+                    onClick={() => {
+                      if (groupedCategories.beveragesRoot) {
+                        onSelectCategory(groupedCategories.beveragesRoot);
+                      }
+                      setBeveragesExpanded((current) => !current);
+                    }}
+                  >
+                    <span>Bebidas</span>
+                    {beveragesExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  </button>
+
+                  {beveragesExpanded ? (
+                    <div className="store-category-subgroup">
+                      {groupedCategories.beveragesRoot ? (
+                        <button
+                          type="button"
+                          className={`store-category-option store-category-option--sub ${
+                            activeCategory === groupedCategories.beveragesRoot ? 'active' : ''
+                          }`}
+                          onClick={() => selectCategory(groupedCategories.beveragesRoot)}
+                        >
+                          Bebidas (todas)
+                        </button>
+                      ) : null}
+                      {groupedCategories.beveragesChildren.map((category) => (
+                        <button
+                          key={category}
+                          type="button"
+                          className={`store-category-option store-category-option--sub ${
+                            activeCategory === category ? 'active' : ''
+                          }`}
+                          onClick={() => selectCategory(category)}
+                        >
+                          {toCategoryLabel(category)}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+
+              {groupedCategories.remaining.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  className={`store-category-option ${activeCategory === category ? 'active' : ''}`}
+                  onClick={() => selectCategory(category)}
+                >
+                  {toCategoryLabel(category)}
+                </button>
+              ))}
+
+              {categories.includes('__other__') ? (
+                <button
+                  type="button"
+                  className={`store-category-option ${activeCategory === '__other__' ? 'active' : ''}`}
+                  onClick={() => selectCategory('__other__')}
+                >
+                  Otros
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </section>
 
       {error ? <p className="home-error">{error}</p> : null}

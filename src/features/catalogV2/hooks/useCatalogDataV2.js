@@ -18,10 +18,14 @@ const PRODUCT_NAME_COLLATOR = new Intl.Collator('es', {
 });
 
 function compactCategory(value) {
-  return String(value || '')
+  const compacted = String(value || '')
     .trim()
     .toLowerCase()
     .replace(/[\s_-]+/g, '');
+  if (compacted === 'cuidadoyhigiene') {
+    return 'cuidados';
+  }
+  return compacted;
 }
 
 function uniqueByProductId(items = []) {

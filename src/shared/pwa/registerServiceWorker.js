@@ -6,7 +6,8 @@ export function registerServiceWorker() {
   window.addEventListener('load', async () => {
     try {
       const baseUrl = import.meta.env.BASE_URL || '/';
-      await navigator.serviceWorker.register(`${baseUrl}sw.js`);
+      const registration = await navigator.serviceWorker.register(`${baseUrl}sw.js`);
+      registration.update().catch(() => undefined);
     } catch {
       // Silent by design: app should continue even if SW fails.
     }

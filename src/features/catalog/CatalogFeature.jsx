@@ -4,11 +4,9 @@ import { buildWebProductImageSrc } from '../../shared/api/productsApi.js';
 function ProductImage({ product, onImageLoadError, onImageLoaded }) {
   const hasImage = Boolean(product?.has_local_image);
   const imageUrl = hasImage ? buildWebProductImageSrc(product?.id) : '';
-  const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    setIsLoaded(false);
     setHasError(false);
   }, [imageUrl, product?.id]);
 
@@ -18,27 +16,6 @@ function ProductImage({ product, onImageLoadError, onImageLoaded }) {
     }
   }, [hasError, onImageLoadError, product?.id]);
 
-  useEffect(() => {
-    if (!isLoaded) {
-      return;
-    }
-    onImageLoaded?.(Number(product?.id || 0));
-  }, [isLoaded, onImageLoaded, product?.id]);
-
-  useEffect(() => {
-    if (!hasImage || !imageUrl || isLoaded || hasError) {
-      return undefined;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setHasError(true);
-    }, 12000);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [hasError, hasImage, imageUrl, isLoaded]);
-
   return (
     <div className="product-card-image-wrap">
       {hasImage && !hasError && imageUrl ? (
@@ -46,11 +23,10 @@ function ProductImage({ product, onImageLoadError, onImageLoaded }) {
           className="product-card-image"
           src={imageUrl}
           alt={product.nombre}
-          loading="eager"
-          fetchpriority="high"
+          loading="lazy"
+          fetchpriority="auto"
           decoding="async"
-          style={{ opacity: isLoaded ? 1 : 0 }}
-          onLoad={() => setIsLoaded(true)}
+          onLoad={() => onImageLoaded?.(Number(product?.id || 0))}
           onError={() => setHasError(true)}
         />
       ) : (

@@ -16,6 +16,7 @@
 
 .home-card--wide {
   width: 100%;
+  overflow-x: clip;
 }
 
 .home-topbar {
@@ -31,6 +32,18 @@
   align-items: center;
   gap: 0.45rem;
   min-width: 0;
+}
+
+.home-topbar-brand div {
+  min-width: 0;
+}
+
+.home-topbar-brand strong {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .home-desktop-nav {

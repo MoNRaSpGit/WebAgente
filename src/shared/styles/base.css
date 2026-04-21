@@ -12,6 +12,14 @@ body {
   margin: 0;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

@@ -268,11 +268,18 @@ export function useCatalogDataV2({
       return;
     }
 
-    setProducts((current) => current.map((item) => (
-      Number(item?.id) === parsedId
-        ? { ...item, ...patch }
-        : item
-    )));
+    const nextStatus = String(patch?.estado || '').trim().toLowerCase();
+    setProducts((current) => {
+      if (nextStatus === 'inactivo') {
+        return current.filter((item) => Number(item?.id) !== parsedId);
+      }
+
+      return current.map((item) => (
+        Number(item?.id) === parsedId
+          ? { ...item, ...patch }
+          : item
+      ));
+    });
 
     const nextCategory = String(patch?.categoria || '').trim();
     if (nextCategory) {

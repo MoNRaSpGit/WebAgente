@@ -15,6 +15,7 @@ function buildInitialForm() {
     nombre: '',
     precio_venta: '',
     categoria: '',
+    estado: 'activo',
     imagen_base64: ''
   };
 }
@@ -23,7 +24,8 @@ function buildInitialOriginal() {
   return {
     nombre: '',
     precio_venta: '',
-    categoria: ''
+    categoria: '',
+    estado: 'activo'
   };
 }
 
@@ -74,6 +76,7 @@ export function useAdminProductEditor({
     const currentCategory = String(product?.categoria || '').trim();
     const currentName = String(product?.nombre || '').trim();
     const currentPrice = Number(product?.precio_venta || 0);
+    const currentStatus = String(product?.estado || 'activo').trim().toLowerCase() || 'activo';
     const seq = requestSeqRef.current + 1;
     requestSeqRef.current = seq;
 
@@ -82,12 +85,14 @@ export function useAdminProductEditor({
       nombre: currentName,
       precio_venta: String(Number(currentPrice).toFixed(2)),
       categoria: currentCategory,
+      estado: currentStatus === 'inactivo' ? 'inactivo' : 'activo',
       imagen_base64: ''
     });
     setEditingOriginal({
       nombre: currentName,
       precio_venta: Number(currentPrice).toFixed(2),
-      categoria: currentCategory
+      categoria: currentCategory,
+      estado: currentStatus === 'inactivo' ? 'inactivo' : 'activo'
     });
     setLoadingEditProduct(true);
 
@@ -99,16 +104,19 @@ export function useAdminProductEditor({
         const freshName = String(fresh?.nombre || '').trim();
         const freshPrice = Number(fresh?.precio_venta || 0);
         const freshCategory = String(fresh?.categoria || currentCategory).trim();
+        const freshStatus = String(fresh?.estado || currentStatus).trim().toLowerCase() || 'activo';
         setEditingForm((current) => ({
           ...current,
           nombre: freshName,
           precio_venta: String(Number(freshPrice).toFixed(2)),
-          categoria: freshCategory
+          categoria: freshCategory,
+          estado: freshStatus === 'inactivo' ? 'inactivo' : 'activo'
         }));
         setEditingOriginal({
           nombre: freshName,
           precio_venta: Number(freshPrice).toFixed(2),
-          categoria: freshCategory
+          categoria: freshCategory,
+          estado: freshStatus === 'inactivo' ? 'inactivo' : 'activo'
         });
       })
       .catch(() => {
@@ -142,10 +150,12 @@ export function useAdminProductEditor({
     const nextName = String(editingForm?.nombre || '').trim();
     const nextPriceText = String(editingForm?.precio_venta || '').trim();
     const nextCategory = String(editingForm?.categoria || '').trim();
+    const nextStatus = String(editingForm?.estado || 'activo').trim().toLowerCase() || 'activo';
     const nextImageBase64 = String(editingForm?.imagen_base64 || '').trim();
     const originalName = String(editingOriginal?.nombre || '').trim();
     const originalPrice = String(editingOriginal?.precio_venta || '').trim();
     const originalCategory = String(editingOriginal?.categoria || '').trim();
+    const originalStatus = String(editingOriginal?.estado || 'activo').trim().toLowerCase() || 'activo';
     const parsedPrice = Number(nextPriceText);
 
     if (!Number.isFinite(productId) || productId <= 0) {
@@ -163,6 +173,10 @@ export function useAdminProductEditor({
       setError('Categoria requerida');
       return;
     }
+    if (nextStatus !== 'activo' && nextStatus !== 'inactivo') {
+      setError('Estado invalido');
+      return;
+    }
 
     const patch = {};
     if (nextName.toLowerCase() !== originalName.toLowerCase()) {
@@ -173,6 +187,9 @@ export function useAdminProductEditor({
     }
     if (nextCategory.toLowerCase() !== originalCategory.toLowerCase()) {
       patch.categoria = nextCategory;
+    }
+    if (nextStatus !== originalStatus) {
+      patch.estado = nextStatus;
     }
     if (nextImageBase64) {
       patch.imagen_base64 = nextImageBase64;
@@ -190,6 +207,7 @@ export function useAdminProductEditor({
         ...(patch.nombre ? { nombre: patch.nombre } : {}),
         ...(typeof patch.precio_venta === 'number' ? { precio_venta: patch.precio_venta } : {}),
         ...(patch.categoria ? { categoria: patch.categoria } : {}),
+        ...(patch.estado ? { estado: patch.estado } : {}),
         ...(patch.imagen_base64 ? { has_local_image: true } : {})
       });
       closeEditor(true);

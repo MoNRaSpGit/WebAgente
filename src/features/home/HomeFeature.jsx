@@ -21,8 +21,8 @@ export function HomeFeature() {
   const [cartItems, setCartItems] = useState({});
   const [activeView, setActiveView] = useState('catalog');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('efectivo');
-  const [deliveryMode, setDeliveryMode] = useState('pickup');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [deliveryMode, setDeliveryMode] = useState('');
   const userMenuRef = useRef(null);
   const deliveryEnabled = true;
 
@@ -56,6 +56,11 @@ export function HomeFeature() {
     () => new Set(Object.keys(cartItems).map((key) => Number(key)).filter((id) => Number.isFinite(id) && id > 0)),
     [cartItems]
   );
+  const canUseDelivery = deliveryEnabled && cartTotal >= 200;
+  const canSubmitOrder = cartList.length > 0
+    && Boolean(paymentMethod)
+    && Boolean(deliveryMode)
+    && (deliveryMode !== 'delivery' || canUseDelivery);
   const isAdmin = String(user?.role || '').toLowerCase() === 'admin';
   const {
     inactiveProducts,
@@ -135,6 +140,18 @@ export function HomeFeature() {
     if (cartList.length === 0) {
       return;
     }
+    if (!paymentMethod) {
+      setError('Selecciona un tipo de pago');
+      return;
+    }
+    if (!deliveryMode) {
+      setError('Selecciona tipo de entrega');
+      return;
+    }
+    if (deliveryMode === 'delivery' && !canUseDelivery) {
+      setError('Delivery disponible desde $200');
+      return;
+    }
 
     setSavingOrder(true);
     setError('');
@@ -142,6 +159,8 @@ export function HomeFeature() {
     try {
       const payload = {
         notes: '',
+        payment_method: paymentMethod,
+        delivery_mode: deliveryMode,
         items: cartList.map((item) => ({
           product_id: item.product_id,
           quantity: item.quantity
@@ -173,8 +192,8 @@ export function HomeFeature() {
       });
 
       setCartItems({});
-      setPaymentMethod('efectivo');
-      setDeliveryMode('pickup');
+      setPaymentMethod('');
+      setDeliveryMode('');
       setActiveView('orders');
     } catch (submitError) {
       setError(submitError.message);
@@ -222,13 +241,23 @@ export function HomeFeature() {
     const noteText = String(note || '').trim();
     const paymentText = String(payment || '').trim();
     const deliveryText = String(delivery || '').trim();
+    const paymentLabelMap = {
+      pos: 'POS',
+      efectivo: 'Efectivo',
+      cuenta: 'Cuenta',
+      puntos: 'Puntos'
+    };
+    const deliveryLabelMap = {
+      delivery: 'Delivery',
+      pickup: 'Yo voy'
+    };
 
     const lines = [
       'Nuevo pedido web',
       orderLine,
       `Cliente: ${customer}`,
-      `Pago: ${paymentText || '-'}`,
-      `Entrega: ${deliveryText || '-'}`,
+      `Pago: ${paymentLabelMap[paymentText] || paymentText || '-'}`,
+      `Entrega: ${deliveryLabelMap[deliveryText] || deliveryText || '-'}`,
       '',
       'Detalle:',
       itemsText
@@ -291,7 +320,8 @@ export function HomeFeature() {
             total={cartTotal}
             paymentMethod={paymentMethod}
             deliveryMode={deliveryMode}
-            deliveryEnabled={deliveryEnabled && cartTotal >= 200}
+            deliveryEnabled={canUseDelivery}
+            canSubmit={canSubmitOrder}
             savingOrder={savingOrder}
             onSelectPaymentMethod={setPaymentMethod}
             onSelectDeliveryMode={setDeliveryMode}

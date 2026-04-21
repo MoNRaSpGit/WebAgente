@@ -7,6 +7,7 @@ export function CartFeature({
   paymentMethod,
   deliveryMode,
   deliveryEnabled,
+  canSubmit,
   savingOrder,
   onSelectPaymentMethod,
   onSelectDeliveryMode,
@@ -107,6 +108,9 @@ export function CartFeature({
 
       <section className="checkout-options-block">
         <h3 className="checkout-options-title">Entrega</h3>
+        {!deliveryEnabled ? (
+          <p className="checkout-options-hint">Delivery disponible desde $200.</p>
+        ) : null}
         <div className="checkout-options-grid checkout-options-grid--two">
           {deliveryOptions.map(({ key, label, Icon }) => {
             const selected = deliveryMode === key;
@@ -132,7 +136,7 @@ export function CartFeature({
         </div>
       </section>
 
-      <button className="cart-submit-button" type="button" disabled={savingOrder || items.length === 0} onClick={onSubmitOrder}>
+      <button className="cart-submit-button" type="button" disabled={savingOrder || !canSubmit} onClick={onSubmitOrder}>
         {savingOrder ? 'Enviando...' : 'Enviar pedido'}
       </button>
     </section>

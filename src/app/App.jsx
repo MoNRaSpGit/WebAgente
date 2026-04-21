@@ -4,10 +4,15 @@ import { HomeFeature } from '../features/home/HomeFeature.jsx';
 import { WebAuthProvider, useWebAuth } from '../shared/auth/WebAuthProvider.jsx';
 
 const SPLASH_MIN_VISIBLE_MS = 4000;
+const SPLASH_BRAND_DELAY_MS = 1200;
 
-function AppLaunchScreen({ overlay = false }) {
+function AppLaunchScreen({ overlay = false, showBrand = false }) {
   const className = overlay ? 'launch-shell launch-shell--overlay' : 'launch-shell';
   const iconSrc = `${import.meta.env.BASE_URL}icons/icon-192.png`;
+
+  if (!showBrand) {
+    return <main className={className} aria-hidden="true" />;
+  }
 
   return (
     <main className={className}>
@@ -23,7 +28,16 @@ function AppLaunchScreen({ overlay = false }) {
 function AppContent() {
   const { loading, isAuthenticated } = useWebAuth();
   const [showLaunch, setShowLaunch] = useState(true);
+  const [showBrand, setShowBrand] = useState(false);
   const splashStartedAt = useRef(Date.now());
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setShowBrand(true);
+    }, SPLASH_BRAND_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (loading) {
@@ -50,7 +64,7 @@ function AppContent() {
   return (
     <>
       {content}
-      {showLaunch ? <AppLaunchScreen overlay /> : null}
+      {showLaunch ? <AppLaunchScreen overlay showBrand={showBrand} /> : null}
     </>
   );
 }

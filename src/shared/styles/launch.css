@@ -4,9 +4,9 @@
   place-items: center;
   padding: 1rem;
   background:
-    radial-gradient(circle at 20% 15%, rgba(32, 94, 156, 0.34), transparent 38%),
-    radial-gradient(circle at 82% 82%, rgba(22, 67, 113, 0.42), transparent 38%),
-    linear-gradient(160deg, #08121f 0%, #0c2138 45%, #091a2b 100%);
+    radial-gradient(circle at 20% 15%, rgba(66, 153, 225, 0.24), transparent 36%),
+    radial-gradient(circle at 82% 82%, rgba(99, 179, 237, 0.2), transparent 34%),
+    linear-gradient(145deg, #f7fbff 0%, #eef5ff 42%, #f8fbff 100%);
 }
 
 .launch-shell--overlay {
@@ -17,13 +17,13 @@
 
 .launch-card {
   width: min(100%, 420px);
-  border: 1px solid rgba(123, 173, 225, 0.3);
+  border: 1px solid #d4e3f7;
   border-radius: 18px;
-  background: rgba(10, 27, 44, 0.78);
-  box-shadow: 0 16px 34px rgba(6, 16, 28, 0.46);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 36px rgba(15, 76, 129, 0.18);
   padding: 1.3rem 1rem 1rem;
   text-align: center;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(4px);
 }
 
 .launch-logo-wrap {
@@ -39,8 +39,8 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 3px solid rgba(107, 171, 232, 0.36);
-  border-top-color: #67b2ff;
+  border: 3px solid rgba(66, 153, 225, 0.35);
+  border-top-color: #1d5fa6;
   animation: launch-spin 1.2s linear infinite;
 }
 
@@ -53,19 +53,19 @@
   font-size: 1rem;
   font-weight: 700;
   color: #ffffff;
-  background: linear-gradient(135deg, #174673, #2490e8);
-  box-shadow: 0 10px 20px rgba(12, 67, 116, 0.42);
+  background: linear-gradient(135deg, #123963, #1f6fb8);
+  box-shadow: 0 10px 18px rgba(15, 76, 129, 0.28);
 }
 
 .launch-card h1 {
   margin: 0 0 0.34rem;
-  color: #e7f1fb;
-  font-size: 1.26rem;
+  color: #102a43;
+  font-size: 1.3rem;
 }
 
 .launch-card p {
   margin: 0;
-  color: #b8cee4;
+  color: #486581;
   font-size: 0.88rem;
 }
 
@@ -74,7 +74,7 @@
   width: min(90%, 280px);
   height: 9px;
   border-radius: 999px;
-  background: rgba(45, 88, 128, 0.5);
+  background: #dbe9f7;
   overflow: hidden;
 }
 
@@ -83,7 +83,7 @@
   width: 40%;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #2e8de0, #7ec3ff);
+  background: linear-gradient(90deg, #1b5e9f, #54a3df);
   animation: launch-slide 1.4s ease-in-out infinite;
 }
 

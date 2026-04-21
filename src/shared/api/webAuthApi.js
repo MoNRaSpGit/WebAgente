@@ -3,6 +3,57 @@ import { fetchApi, parseJson } from './apiClient.js';
 let lastHealthProbeAt = 0;
 let lastHealthProbeOk = false;
 
+function wait(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+async function postJsonWithRetry(path, payload, { retries = 2, retryDelayMs = 220 } = {}) {
+  let attempt = 0;
+  let lastResponse = null;
+  let lastData = null;
+  let lastError = null;
+
+  while (attempt <= retries) {
+    try {
+      const response = await fetchApi(path, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await parseJson(response);
+
+      if (response.ok) {
+        return { response, data };
+      }
+
+      const isRetryableStatus = response.status === 503 || response.status === 502 || response.status === 504;
+      if (!isRetryableStatus || attempt >= retries) {
+        return { response, data };
+      }
+
+      lastResponse = response;
+      lastData = data;
+    } catch (error) {
+      lastError = error;
+      if (attempt >= retries) {
+        break;
+      }
+    }
+
+    attempt += 1;
+    await wait(retryDelayMs * attempt);
+  }
+
+  if (lastResponse) {
+    return { response: lastResponse, data: lastData || {} };
+  }
+  throw lastError || new Error('No se pudo conectar con BackAgente.');
+}
+
 async function ensureApiReady() {
   const now = Date.now();
   if (lastHealthProbeOk && now - lastHealthProbeAt < 5000) {
@@ -48,16 +99,10 @@ function mapWebAuthError(response, data, fallbackMessage) {
 
 export async function registerWebUser(payload) {
   await ensureApiReady();
-
-  const response = await fetchApi('/api/web/auth/register', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
+  const { response, data } = await postJsonWithRetry('/api/web/auth/register', payload, {
+    retries: 1,
+    retryDelayMs: 180
   });
-
-  const data = await parseJson(response);
 
   if (!response.ok) {
     throw new Error(mapWebAuthError(response, data, 'No se pudo registrar'));
@@ -68,16 +113,10 @@ export async function registerWebUser(payload) {
 
 export async function loginWebUser(payload) {
   await ensureApiReady();
-
-  const response = await fetchApi('/api/web/auth/login', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
+  const { response, data } = await postJsonWithRetry('/api/web/auth/login', payload, {
+    retries: 2,
+    retryDelayMs: 220
   });
-
-  const data = await parseJson(response);
 
   if (!response.ok) {
     throw new Error(mapWebAuthError(response, data, 'No se pudo iniciar sesion'));

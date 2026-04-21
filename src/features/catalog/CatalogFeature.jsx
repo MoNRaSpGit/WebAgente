@@ -1,14 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildWebProductImageSrc } from '../../shared/api/productsApi.js';
 
-function ProductImage({ product, onImageLoadError, onImageLoaded }) {
+function ProductImage({ product, priority, onImageLoadError, onImageLoaded }) {
   const hasImage = Boolean(product?.has_local_image);
   const imageUrl = hasImage ? buildWebProductImageSrc(product?.id) : '';
+  const [attempt, setAttempt] = useState(0);
   const [hasError, setHasError] = useState(false);
+  const retryTimeoutRef = useRef(null);
+
+  const imageSrc = useMemo(() => {
+    if (!imageUrl) {
+      return '';
+    }
+    const separator = imageUrl.includes('?') ? '&' : '?';
+    return `${imageUrl}${separator}r=${attempt}`;
+  }, [attempt, imageUrl]);
 
   useEffect(() => {
+    setAttempt(0);
     setHasError(false);
   }, [imageUrl, product?.id]);
+
+  useEffect(() => () => {
+    if (retryTimeoutRef.current) {
+      window.clearTimeout(retryTimeoutRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (hasError) {
@@ -18,16 +35,28 @@ function ProductImage({ product, onImageLoadError, onImageLoaded }) {
 
   return (
     <div className="product-card-image-wrap">
-      {hasImage && !hasError && imageUrl ? (
+      {hasImage && !hasError && imageSrc ? (
         <img
           className="product-card-image"
-          src={imageUrl}
+          src={imageSrc}
           alt={product.nombre}
-          loading="lazy"
-          fetchpriority="auto"
+          loading={priority ? 'eager' : 'lazy'}
+          fetchpriority={priority ? 'high' : 'auto'}
           decoding="async"
-          onLoad={() => onImageLoaded?.(Number(product?.id || 0))}
-          onError={() => setHasError(true)}
+          onLoad={() => {
+            setHasError(false);
+            onImageLoaded?.(Number(product?.id || 0));
+          }}
+          onError={() => {
+            if (attempt < 2) {
+              const nextAttempt = attempt + 1;
+              retryTimeoutRef.current = window.setTimeout(() => {
+                setAttempt(nextAttempt);
+              }, 120 * nextAttempt);
+              return;
+            }
+            setHasError(true);
+          }}
         />
       ) : (
         <div className="product-card-image product-card-image--placeholder">
@@ -298,10 +327,11 @@ export function CatalogFeature({
       {!loading && !error ? (
         <>
           <ul className="products-grid">
-            {sortedProducts.map((product) => (
+            {sortedProducts.map((product, index) => (
               <li key={product.id} className="product-card">
                 <ProductImage
                   product={product}
+                  priority={index < 12}
                   onImageLoadError={handleImageLoadError}
                   onImageLoaded={handleImageLoaded}
                 />

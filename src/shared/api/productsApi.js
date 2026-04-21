@@ -72,3 +72,40 @@ export async function fetchWebCategories({ status = 'activo' } = {}) {
 
   return Array.isArray(data.items) ? data.items : [];
 }
+
+export async function fetchWebAdminProductById(token, productId) {
+  const response = await fetchApi(`/api/web/admin/products/${Number(productId)}`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  const data = await parseJson(response);
+
+  if (!response.ok) {
+    const error = new Error(data.message || 'No se pudo cargar el producto');
+    error.status = response.status;
+    throw error;
+  }
+
+  return data?.item || null;
+}
+
+export async function updateWebAdminProduct(token, productId, payload) {
+  const response = await fetchApi(`/api/web/admin/products/${Number(productId)}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload || {})
+  });
+  const data = await parseJson(response);
+
+  if (!response.ok) {
+    const error = new Error(data.message || 'No se pudo actualizar el producto');
+    error.status = response.status;
+    throw error;
+  }
+
+  return data?.item || null;
+}

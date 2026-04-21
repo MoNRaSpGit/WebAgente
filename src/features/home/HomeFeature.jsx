@@ -57,6 +57,7 @@ export function HomeFeature() {
   const isAdmin = String(user?.role || '').toLowerCase() === 'admin';
   const {
     inactiveProducts,
+    inactiveTotal,
     inactiveHasMore,
     inactiveLoading,
     inactiveLoadingMore,
@@ -255,13 +256,14 @@ export function HomeFeature() {
 
         {activeView === 'update' ? (
           <InactiveProductsFeature
+            token={token}
             loading={inactiveLoading}
             loadingMore={inactiveLoadingMore}
             hasMore={inactiveHasMore}
             error={inactiveError}
             items={inactiveProducts}
-            total={inactiveProducts.length}
-            onLoadMore={() => loadInactiveProductsPage()}
+            total={inactiveTotal}
+            onLoadMore={(options) => loadInactiveProductsPage(options)}
           />
         ) : null}
 

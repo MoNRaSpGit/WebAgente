@@ -4,6 +4,7 @@ import { WEB_INACTIVE_PRODUCTS_PAGE_LIMIT } from '../home.constants.js';
 
 export function useInactiveProducts(activeView, enabled = false) {
   const [inactiveProducts, setInactiveProducts] = useState([]);
+  const [inactiveTotal, setInactiveTotal] = useState(0);
   const [inactiveOffset, setInactiveOffset] = useState(0);
   const [inactiveHasMore, setInactiveHasMore] = useState(true);
   const [inactiveLoading, setInactiveLoading] = useState(false);
@@ -26,6 +27,7 @@ export function useInactiveProducts(activeView, enabled = false) {
       setInactiveLoading(true);
       setInactiveError('');
       setInactiveProducts([]);
+      setInactiveTotal(0);
       setInactiveOffset(0);
       setInactiveHasMore(true);
       inactiveOffsetRef.current = 0;
@@ -49,8 +51,10 @@ export function useInactiveProducts(activeView, enabled = false) {
       const nextItems = Array.isArray(result.items) ? result.items : [];
       const nextOffset = requestOffset + nextItems.length;
       const nextHasMore = Boolean(result.page?.has_more);
+      const nextTotal = Number(result.page?.total || 0);
 
       setInactiveProducts((current) => (reset ? nextItems : [...current, ...nextItems]));
+      setInactiveTotal(nextTotal);
       setInactiveOffset(nextOffset);
       setInactiveHasMore(nextHasMore);
       inactiveOffsetRef.current = nextOffset;
@@ -70,6 +74,7 @@ export function useInactiveProducts(activeView, enabled = false) {
     async function loadInactive() {
       if (!enabled) {
         setInactiveProducts([]);
+        setInactiveTotal(0);
         setInactiveOffset(0);
         setInactiveHasMore(true);
         setInactiveError('');
@@ -91,6 +96,7 @@ export function useInactiveProducts(activeView, enabled = false) {
 
   return {
     inactiveProducts,
+    inactiveTotal,
     inactiveHasMore,
     inactiveLoading,
     inactiveLoadingMore,

@@ -211,9 +211,83 @@
   width: 100%;
 }
 
+.product-card-edit {
+  border: 1px solid #486581;
+  background: #f8fbff;
+  color: #243b53;
+  border-radius: 8px;
+  padding: 0.36rem 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  width: 100%;
+}
+
 .product-card-add--selected {
   border-color: #18794e;
   background: #18794e;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(16, 42, 67, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 0.6rem;
+}
+
+.modal-card {
+  width: min(100%, 420px);
+  background: #fff;
+  border: 1px solid #d7e3f0;
+  border-radius: 12px;
+  padding: 0.8rem;
+  box-shadow: 0 10px 26px rgba(16, 42, 67, 0.22);
+}
+
+.modal-card h3 {
+  margin: 0 0 0.55rem;
+}
+
+.modal-form {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.modal-form label {
+  display: grid;
+  gap: 0.22rem;
+  font-size: 0.82rem;
+  color: #334e68;
+}
+
+.modal-form input,
+.modal-form select {
+  border: 1px solid #c5d2e2;
+  border-radius: 8px;
+  padding: 0.42rem 0.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.modal-actions button {
+  border: 1px solid #0f4c81;
+  background: #0f4c81;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.42rem 0.62rem;
+  font-size: 0.76rem;
+}
+
+.modal-actions button[type='button'] {
+  border-color: #c5d2e2;
+  background: #f8fbff;
+  color: #334e68;
 }
 
 .product-card-add:disabled {

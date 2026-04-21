@@ -44,7 +44,6 @@ export function CatalogFeature({
   loading,
   loadingMore,
   error,
-  orderSuccess,
   cartCount,
   searchValue,
   categories,
@@ -52,6 +51,7 @@ export function CatalogFeature({
   points,
   totalCompras,
   lastFetchMs,
+  selectedProductIds,
   onSearchChange,
   onSelectCategory,
   onIncreaseProduct,
@@ -61,7 +61,9 @@ export function CatalogFeature({
   const [loadedImageIds, setLoadedImageIds] = useState(() => new Set());
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [isBebidasExpanded, setIsBebidasExpanded] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
   const categoryMenuRef = useRef(null);
+  const toastTimeoutRef = useRef(null);
 
   useEffect(() => {
     setFailedImageIds(new Set());
@@ -79,6 +81,12 @@ export function CatalogFeature({
 
     window.addEventListener('click', handleWindowClick);
     return () => window.removeEventListener('click', handleWindowClick);
+  }, []);
+
+  useEffect(() => () => {
+    if (toastTimeoutRef.current) {
+      window.clearTimeout(toastTimeoutRef.current);
+    }
   }, []);
 
   function handleImageLoadError(productId) {
@@ -176,6 +184,29 @@ export function CatalogFeature({
     return category;
   }
 
+  function showToast(message) {
+    if (toastTimeoutRef.current) {
+      window.clearTimeout(toastTimeoutRef.current);
+    }
+    setToastMessage(message);
+    toastTimeoutRef.current = window.setTimeout(() => {
+      setToastMessage('');
+      toastTimeoutRef.current = null;
+    }, 1400);
+  }
+
+  function handleAddProduct(product) {
+    const productId = Number(product?.id || 0);
+    if (!Number.isFinite(productId) || productId <= 0) {
+      return;
+    }
+    if (selectedProductIds?.has(productId)) {
+      return;
+    }
+    onIncreaseProduct(product);
+    showToast('Producto agregado');
+  }
+
   return (
     <>
       <label className="store-search store-search--catalog">
@@ -263,8 +294,7 @@ export function CatalogFeature({
       </section>
 
       {error ? <p className="home-error">{error}</p> : null}
-      {orderSuccess ? <p className="home-success">{orderSuccess}</p> : null}
-
+      {toastMessage ? <p className="catalog-toast">{toastMessage}</p> : null}
       {!loading && !error ? (
         <>
           <ul className="products-grid">
@@ -277,8 +307,13 @@ export function CatalogFeature({
                 />
                 <strong className="product-card-name">{product.nombre}</strong>
                 <span className="product-card-price">${Number(product.precio_venta || 0).toFixed(2)}</span>
-                <button type="button" className="product-card-add" onClick={() => onIncreaseProduct(product)}>
-                  Agregar
+                <button
+                  type="button"
+                  className={`product-card-add ${selectedProductIds?.has(Number(product.id)) ? 'product-card-add--selected' : ''}`}
+                  onClick={() => handleAddProduct(product)}
+                  disabled={selectedProductIds?.has(Number(product.id))}
+                >
+                  {selectedProductIds?.has(Number(product.id)) ? 'En carrito' : 'Agregar'}
                 </button>
               </li>
             ))}

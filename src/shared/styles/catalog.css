@@ -149,6 +149,7 @@
 .product-card-image-wrap {
   width: 100%;
   aspect-ratio: 1 / 1;
+  min-height: 0;
   border-radius: 9px;
   overflow: hidden;
   background: #ecf3fb;
@@ -156,9 +157,12 @@
 }
 
 .product-card-image {
+  max-width: 100%;
+  max-height: 100%;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center center;
   display: block;
 }
 
@@ -196,6 +200,27 @@
   font-size: 0.7rem;
   font-weight: 600;
   width: 100%;
+}
+
+.product-card-add--selected {
+  border-color: #18794e;
+  background: #18794e;
+}
+
+.product-card-add:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.catalog-toast {
+  margin: 0.35rem 0 0.15rem;
+  border: 1px solid #b7ebca;
+  background: #e9f9ef;
+  color: #18794e;
+  border-radius: 9px;
+  padding: 0.38rem 0.52rem;
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
 .inactive-shell {

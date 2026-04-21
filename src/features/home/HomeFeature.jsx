@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CatalogFeature } from '../../features/catalog/CatalogFeature.jsx';
 import { InactiveProductsFeature } from '../../features/catalog/InactiveProductsFeature.jsx';
 import { CartFeature } from '../../features/orders/CartFeature.jsx';
@@ -18,7 +18,6 @@ export function HomeFeature() {
   const [myProfile, setMyProfile] = useState(profile || null);
   const [savingOrder, setSavingOrder] = useState(false);
   const [orderNote, setOrderNote] = useState('');
-  const [orderSuccess, setOrderSuccess] = useState('');
   const [cartItems, setCartItems] = useState({});
   const [activeView, setActiveView] = useState('catalog');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -62,6 +61,10 @@ export function HomeFeature() {
     0
   );
   const cartCount = cartList.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const cartProductIds = useMemo(
+    () => new Set(Object.keys(cartItems).map((key) => Number(key)).filter((id) => Number.isFinite(id) && id > 0)),
+    [cartItems]
+  );
   const isAdmin = String(user?.role || '').toLowerCase() === 'admin';
 
   useEffect(() => {
@@ -127,7 +130,6 @@ export function HomeFeature() {
 
     setSavingOrder(true);
     setError('');
-    setOrderSuccess('');
 
     try {
       const payload = {
@@ -163,7 +165,6 @@ export function HomeFeature() {
 
       setCartItems({});
       setOrderNote('');
-      setOrderSuccess(`Pedido #${result.item?.id} enviado`);
       setActiveView('orders');
     } catch (submitError) {
       setError(submitError.message);
@@ -209,7 +210,6 @@ export function HomeFeature() {
             loading={loading}
             loadingMore={productsLoadingMore}
             error={error}
-            orderSuccess={orderSuccess}
             cartCount={cartCount}
             searchValue={searchTerm}
             categories={categories}
@@ -217,6 +217,7 @@ export function HomeFeature() {
             points={Number(myProfile?.puntos_actuales || 0)}
             totalCompras={Number(myProfile?.total_compras || 0)}
             lastFetchMs={lastFetchMs}
+            selectedProductIds={cartProductIds}
             onSearchChange={setSearchTerm}
             onSelectCategory={setActiveCategory}
             onIncreaseProduct={increaseProduct}

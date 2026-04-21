@@ -12,6 +12,11 @@ import {
 } from '../../home/home.constants.js';
 import { normalizeSearchText } from '../../home/home.utils.js';
 
+const PRODUCT_NAME_COLLATOR = new Intl.Collator('es', {
+  sensitivity: 'base',
+  numeric: true
+});
+
 function compactCategory(value) {
   return String(value || '')
     .trim()
@@ -79,7 +84,7 @@ export function useCatalogDataV2({
   const filteredProducts = useMemo(() => {
     const activeCategoryCompact = activeCategory === CATEGORY_ALL ? CATEGORY_ALL : compactCategory(activeCategory);
 
-    return products.filter((item) => {
+    const filtered = products.filter((item) => {
       const categoryCompact = compactCategory(item?.categoria);
 
       if (activeCategoryCompact === CATEGORY_OTHER) {
@@ -98,6 +103,17 @@ export function useCatalogDataV2({
       const category = normalizeSearchText(item?.categoria);
       const haystack = `${name} ${category}`.trim();
       return searchTokens.every((token) => haystack.includes(token));
+    });
+
+    return filtered.sort((a, b) => {
+      const nameA = String(a?.nombre || '').trim();
+      const nameB = String(b?.nombre || '').trim();
+      const byName = PRODUCT_NAME_COLLATOR.compare(nameA, nameB);
+      if (byName !== 0) {
+        return byName;
+      }
+
+      return Number(a?.id || 0) - Number(b?.id || 0);
     });
   }, [activeCategory, knownCategoriesNormalized, normalizedSearch, products, searchTokens]);
 

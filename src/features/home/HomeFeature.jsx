@@ -86,7 +86,7 @@ export function HomeFeature() {
       ? CATEGORY_ALL
       : String(activeCategory || '').toLowerCase().replace(/\s+/g, ' ').trim();
 
-    return products.filter((item) => {
+    const filtered = products.filter((item) => {
       const itemCategoryNormalized = String(item.categoria || '')
         .toLowerCase()
         .replace(/\s+/g, ' ')
@@ -111,12 +111,20 @@ export function HomeFeature() {
 
       return searchTokens.every((token) => haystack.includes(token));
     });
+
+    return filtered.sort((a, b) => {
+      const aHasImage = Boolean(a?.has_local_image);
+      const bHasImage = Boolean(b?.has_local_image);
+      if (aHasImage !== bHasImage) {
+        return aHasImage ? -1 : 1;
+      }
+      return 0;
+    });
   }, [activeCategory, knownCategoriesNormalized, normalizedSearch, products, searchTokens]);
   const visibleProducts = useMemo(
     () => filteredProducts.slice(0, visibleProductsCount),
     [filteredProducts, visibleProductsCount]
   );
-  const skeletonCount = loading ? 9 : (productsLoadingMore ? 3 : 0);
 
   const cartTotal = cartList.reduce(
     (sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0),
@@ -667,7 +675,6 @@ export function HomeFeature() {
             error={error}
             orderSuccess={orderSuccess}
             cartCount={cartCount}
-            skeletonCount={skeletonCount}
             searchValue={searchTerm}
             categories={categories}
             activeCategory={activeCategory}

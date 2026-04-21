@@ -11,6 +11,56 @@ import { useCatalogDataV2 } from '../../features/catalogV2/hooks/useCatalogDataV
 import { useInactiveProducts } from './hooks/useInactiveProducts.js';
 import { useMyOrdersRealtime } from './hooks/useMyOrdersRealtime.js';
 
+const CHECKOUT_PREFS_KEY_PREFIX = 'webagente.checkoutPrefs.v1';
+
+function buildCheckoutPrefsKey(userId) {
+  const parsedId = Number(userId || 0);
+  if (!Number.isFinite(parsedId) || parsedId <= 0) {
+    return '';
+  }
+  return `${CHECKOUT_PREFS_KEY_PREFIX}.${parsedId}`;
+}
+
+function loadCheckoutPrefs(userId) {
+  const key = buildCheckoutPrefsKey(userId);
+  if (!key || typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw);
+    return {
+      payment_method: String(parsed?.payment_method || '').trim().toLowerCase(),
+      delivery_mode: String(parsed?.delivery_mode || '').trim().toLowerCase()
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveCheckoutPrefs(userId, paymentMethod, deliveryMode) {
+  const key = buildCheckoutPrefsKey(userId);
+  if (!key || typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({
+        payment_method: String(paymentMethod || '').trim().toLowerCase(),
+        delivery_mode: String(deliveryMode || '').trim().toLowerCase()
+      })
+    );
+  } catch {
+    // no-op: si localStorage no esta disponible, no rompemos el flujo.
+  }
+}
+
 export function HomeFeature() {
   const { profile, user, token, logout } = useWebAuth();
   const manualWhatsappTo = String(import.meta.env.VITE_WHATSAPP_MANUAL_TO || '').replace(/[^\d]/g, '');
@@ -21,8 +71,8 @@ export function HomeFeature() {
   const [cartItems, setCartItems] = useState({});
   const [activeView, setActiveView] = useState('catalog');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('');
-  const [deliveryMode, setDeliveryMode] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('efectivo');
+  const [deliveryMode, setDeliveryMode] = useState('pickup');
   const userMenuRef = useRef(null);
   const deliveryEnabled = true;
 
@@ -73,6 +123,27 @@ export function HomeFeature() {
   } = useInactiveProducts(activeView, isAdmin);
 
   useMyOrdersRealtime({ activeView, token, setMyOrders });
+
+  useEffect(() => {
+    const prefs = loadCheckoutPrefs(user?.id);
+    if (!prefs) {
+      return;
+    }
+
+    const allowedPayments = new Set(['pos', 'efectivo', 'cuenta', 'puntos']);
+    const allowedDeliveryModes = new Set(['delivery', 'pickup']);
+
+    if (allowedPayments.has(prefs.payment_method)) {
+      setPaymentMethod(prefs.payment_method);
+    }
+    if (allowedDeliveryModes.has(prefs.delivery_mode)) {
+      setDeliveryMode(prefs.delivery_mode);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    saveCheckoutPrefs(user?.id, paymentMethod, deliveryMode);
+  }, [deliveryMode, paymentMethod, user?.id]);
 
   useEffect(() => {
     function handleWindowClick(event) {
@@ -192,8 +263,6 @@ export function HomeFeature() {
       });
 
       setCartItems({});
-      setPaymentMethod('');
-      setDeliveryMode('');
       setActiveView('orders');
     } catch (submitError) {
       setError(submitError.message);

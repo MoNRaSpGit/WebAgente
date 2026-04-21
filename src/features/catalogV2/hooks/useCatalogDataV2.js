@@ -33,6 +33,10 @@ function uniqueByProductId(items = []) {
   return result;
 }
 
+function mergeUniqueProducts(currentItems = [], nextItems = []) {
+  return uniqueByProductId([...currentItems, ...nextItems]);
+}
+
 export function useCatalogDataV2({
   token,
   activeView,
@@ -105,44 +109,68 @@ export function useCatalogDataV2({
   useEffect(() => {
     let mounted = true;
 
+    async function hydrateRemainingProducts({ offset, startedAt }) {
+      let nextOffset = Number(offset || 0);
+
+      for (let page = 1; page < WEB_PRODUCTS_MAX_PAGES; page += 1) {
+        if (!mounted) {
+          return;
+        }
+
+        try {
+          const result = await fetchWebProducts({
+            limit: WEB_PRODUCTS_PAGE_LIMIT,
+            offset: nextOffset,
+            category: ''
+          });
+
+          const pageItems = Array.isArray(result.items) ? result.items : [];
+          if (!mounted || pageItems.length === 0) {
+            return;
+          }
+
+          setProducts((current) => mergeUniqueProducts(current, pageItems));
+          nextOffset += pageItems.length;
+
+          if (!result?.page?.has_more) {
+            break;
+          }
+        } catch {
+          // No cortamos la UX por fallos de hidratar paginas adicionales.
+          break;
+        }
+      }
+
+      if (mounted) {
+        setLastFetchMs(Math.round(performance.now() - startedAt));
+      }
+    }
+
     async function loadInitialData() {
       try {
         setLoading(true);
         setError('');
         const startAt = performance.now();
 
-        let offset = 0;
-        const allProducts = [];
-
-        for (let page = 0; page < WEB_PRODUCTS_MAX_PAGES; page += 1) {
-          const result = await fetchWebProducts({
-            limit: WEB_PRODUCTS_PAGE_LIMIT,
-            offset,
-            category: ''
-          });
-
-          const pageItems = Array.isArray(result.items) ? result.items : [];
-          allProducts.push(...pageItems);
-
-          offset += pageItems.length;
-          if (!result?.page?.has_more || pageItems.length === 0) {
-            break;
-          }
-        }
-
-        const [categoryList, orders, profileData] = await Promise.all([
+        const bootstrapPromise = Promise.all([
           fetchWebCategories({ status: 'activo' }).catch(() => []),
           fetchMyWebOrders(token, 20).catch(() => []),
           fetchMyWebProfile(token).catch(() => null)
         ]);
+        const firstPageResult = await fetchWebProducts({
+          limit: WEB_PRODUCTS_PAGE_LIMIT,
+          offset: 0,
+          category: ''
+        });
+        const firstPageItems = Array.isArray(firstPageResult?.items) ? firstPageResult.items : [];
+        const [categoryList, orders, profileData] = await bootstrapPromise;
 
         if (!mounted) {
           return;
         }
 
-        const uniqueProducts = uniqueByProductId(allProducts);
+        const uniqueProducts = uniqueByProductId(firstPageItems);
         setProducts(uniqueProducts);
-        setLastFetchMs(Math.round(performance.now() - startAt));
         setVisibleProductsCount(WEB_PRODUCTS_FIRST_VISIBLE_COUNT);
 
         const uniqueCategories = [];
@@ -160,15 +188,22 @@ export function useCatalogDataV2({
 
         onBootstrapOrders?.(Array.isArray(orders) ? orders : []);
         onBootstrapProfile?.(profileData);
+        setLastFetchMs(Math.round(performance.now() - startAt));
+        setLoading(false);
+
+        const canHydrateMore = Boolean(firstPageResult?.page?.has_more) && firstPageItems.length > 0;
+        if (canHydrateMore) {
+          hydrateRemainingProducts({
+            offset: firstPageItems.length,
+            startedAt: startAt
+          });
+        }
       } catch (loadError) {
         if (!mounted) {
           return;
         }
         setError(loadError.message || 'No se pudieron cargar los productos');
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     }
 

@@ -232,8 +232,6 @@ export function HomeFeature() {
       return;
     }
 
-    const orderId = Number(order?.id || 0);
-    const orderLine = Number.isFinite(orderId) && orderId > 0 ? `Pedido #${orderId}` : 'Pedido web';
     const customer = String(user?.nombre || user?.email || 'Cliente').trim();
     const itemsText = items
       .map((item) => `- ${Number(item.quantity || 0)} x ${String(item.product_name || 'Producto').trim()}`)
@@ -254,7 +252,6 @@ export function HomeFeature() {
 
     const lines = [
       'Nuevo pedido web',
-      orderLine,
       `Cliente: ${customer}`,
       `Pago: ${paymentLabelMap[paymentText] || paymentText || '-'}`,
       `Entrega: ${deliveryLabelMap[deliveryText] || deliveryText || '-'}`,
@@ -272,7 +269,9 @@ export function HomeFeature() {
     const popup = window.open(url, '_blank', 'noopener,noreferrer');
 
     if (!popup) {
-      setError('Pedido guardado. Tu navegador bloqueo la apertura de WhatsApp.');
+      // El pedido ya fue guardado correctamente; si el navegador bloquea el popup
+      // evitamos mostrarlo como error global para no confundir al usuario.
+      console.warn('[web-order] WhatsApp popup bloqueado por el navegador');
     }
   }
 

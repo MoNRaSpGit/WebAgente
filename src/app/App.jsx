@@ -2,17 +2,29 @@ import { WebLoginCard } from '../features/auth/components/WebLoginCard.jsx';
 import { HomeFeature } from '../features/home/HomeFeature.jsx';
 import { WebAuthProvider, useWebAuth } from '../shared/auth/WebAuthProvider.jsx';
 
+function AppLaunchScreen() {
+  return (
+    <main className="launch-shell">
+      <section className="launch-card" aria-label="Cargando aplicacion">
+        <div className="launch-logo-wrap">
+          <span className="launch-logo-ring" />
+          <span className="launch-logo">WP</span>
+        </div>
+        <h1>Web Piloto</h1>
+        <p>Preparando tu espacio...</p>
+        <div className="launch-loader" role="presentation">
+          <span />
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function AppContent() {
   const { loading, isAuthenticated } = useWebAuth();
 
   if (loading) {
-    return (
-      <main className="home-shell">
-        <section className="home-card">
-          <p>Validando sesion web...</p>
-        </section>
-      </main>
-    );
+    return <AppLaunchScreen />;
   }
 
   if (!isAuthenticated) {

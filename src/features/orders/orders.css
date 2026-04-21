@@ -37,6 +37,22 @@
   gap: 0.55rem;
 }
 
+.orders-accordion-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.2rem;
+}
+
+.orders-accordion-toggle {
+  border: 1px solid #b6d3ef;
+  background: #f3f8fd;
+  color: #0b5b93;
+  border-radius: 999px;
+  padding: 0.32rem 0.74rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
 .orders-item {
   border: 1px solid #dce6f2;
   border-radius: 10px;

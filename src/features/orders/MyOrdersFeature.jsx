@@ -1,8 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { canHideOrder, normalizeOrderStatus } from './orderRealtime.js';
 
 export function MyOrdersFeature({ orders, loading, onHideOrder }) {
   const [expandedOrderId, setExpandedOrderId] = useState(null);
+  const [showAllOrders, setShowAllOrders] = useState(false);
+  const hasHiddenOrders = orders.length > 2;
+  const visibleOrders = useMemo(
+    () => (showAllOrders ? orders : orders.slice(0, 2)),
+    [orders, showAllOrders]
+  );
+
+  useEffect(() => {
+    if (!hasHiddenOrders) {
+      setShowAllOrders(false);
+    }
+  }, [hasHiddenOrders]);
 
   function toOrderStatusLabel(status) {
     const normalized = normalizeOrderStatus(status);
@@ -63,62 +75,75 @@ export function MyOrdersFeature({ orders, loading, onHideOrder }) {
       {loading ? <p>Cargando pedidos...</p> : null}
       {!loading && orders.length === 0 ? <p>Todavia no hiciste pedidos.</p> : null}
       {!loading && orders.length > 0 ? (
-        <ul className="orders-list">
-          {orders.map((order) => {
-            const normalizedStatus = normalizeOrderStatus(order.estado);
-            const hideEnabled = canHideOrder(normalizedStatus);
+        <>
+          <ul className="orders-list">
+            {visibleOrders.map((order) => {
+              const normalizedStatus = normalizeOrderStatus(order.estado);
+              const hideEnabled = canHideOrder(normalizedStatus);
 
-            return (
-              <li key={order.id} className="orders-item">
-                <div className="orders-item-top">
-                  <button
-                    type="button"
-                    className="orders-item-main"
-                    onClick={() => setExpandedOrderId((current) => (current === order.id ? null : order.id))}
-                  >
-                    <strong>Pedido</strong>
-                    <span>{formatOrderDate(order.created_at)}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="orders-detail-toggle"
-                    onClick={() => setExpandedOrderId((current) => (current === order.id ? null : order.id))}
-                  >
-                    Detalle
-                  </button>
-                  <span className={`orders-status orders-status--${normalizedStatus}`}>
-                    {toOrderStatusLabel(order.estado)}
-                  </span>
-                  <button
-                    type="button"
-                    className="orders-hide-button"
-                    disabled={!hideEnabled}
-                    onClick={() => onHideOrder?.(order.id)}
-                    aria-label="Ocultar pedido"
-                    title={hideEnabled ? 'Eliminar pedido' : 'Solo pedidos entregados'}
-                  >
-                    ×
-                  </button>
-                </div>
-                <p className="orders-item-total">Total: ${Number(order.total_estimado || 0).toFixed(2)}</p>
+              return (
+                <li key={order.id} className="orders-item">
+                  <div className="orders-item-top">
+                    <button
+                      type="button"
+                      className="orders-item-main"
+                      onClick={() => setExpandedOrderId((current) => (current === order.id ? null : order.id))}
+                    >
+                      <strong>Pedido</strong>
+                      <span>{formatOrderDate(order.created_at)}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="orders-detail-toggle"
+                      onClick={() => setExpandedOrderId((current) => (current === order.id ? null : order.id))}
+                    >
+                      Detalle
+                    </button>
+                    <span className={`orders-status orders-status--${normalizedStatus}`}>
+                      {toOrderStatusLabel(order.estado)}
+                    </span>
+                    <button
+                      type="button"
+                      className="orders-hide-button"
+                      disabled={!hideEnabled}
+                      onClick={() => onHideOrder?.(order.id)}
+                      aria-label="Ocultar pedido"
+                      title={hideEnabled ? 'Eliminar pedido' : 'Solo pedidos entregados'}
+                    >
+                      x
+                    </button>
+                  </div>
+                  <p className="orders-item-total">Total: ${Number(order.total_estimado || 0).toFixed(2)}</p>
 
-                {expandedOrderId === order.id ? (
-                  <ul className="orders-item-details">
-                    {(Array.isArray(order.items) ? order.items : []).map((item) => (
-                      <li key={`${order.id}-${item.id}`}>
-                        <span>{Number(item.quantity || 0)} x</span>
-                        <strong>{item.product_name}</strong>
-                      </li>
-                    ))}
-                    {(Array.isArray(order.items) ? order.items.length : 0) === 0 ? (
-                      <li className="orders-item-details-empty">Sin detalle disponible</li>
-                    ) : null}
-                  </ul>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
+                  {expandedOrderId === order.id ? (
+                    <ul className="orders-item-details">
+                      {(Array.isArray(order.items) ? order.items : []).map((item) => (
+                        <li key={`${order.id}-${item.id}`}>
+                          <span>{Number(item.quantity || 0)} x</span>
+                          <strong>{item.product_name}</strong>
+                        </li>
+                      ))}
+                      {(Array.isArray(order.items) ? order.items.length : 0) === 0 ? (
+                        <li className="orders-item-details-empty">Sin detalle disponible</li>
+                      ) : null}
+                    </ul>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+          {hasHiddenOrders ? (
+            <div className="orders-accordion-actions">
+              <button
+                type="button"
+                className="orders-accordion-toggle"
+                onClick={() => setShowAllOrders((current) => !current)}
+              >
+                {showAllOrders ? 'Ver menos' : `Ver mas (${orders.length - 2})`}
+              </button>
+            </div>
+          ) : null}
+        </>
       ) : null}
     </section>
   );

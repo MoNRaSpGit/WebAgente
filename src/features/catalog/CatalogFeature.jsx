@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildWebProductImageSrc } from '../../shared/api/productsApi.js';
 
-function ProductImage({ product, onImageLoadError }) {
+function ProductImage({ product, onImageLoadError, onImageLoaded }) {
   const hasImage = Boolean(product?.has_local_image);
   const imageUrl = hasImage ? buildWebProductImageSrc(product?.id) : '';
   const [isLoaded, setIsLoaded] = useState(false);
@@ -17,6 +17,13 @@ function ProductImage({ product, onImageLoadError }) {
       onImageLoadError?.(Number(product?.id || 0));
     }
   }, [hasError, onImageLoadError, product?.id]);
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+    onImageLoaded?.(Number(product?.id || 0));
+  }, [isLoaded, onImageLoaded, product?.id]);
 
   useEffect(() => {
     if (!hasImage || !imageUrl || isLoaded || hasError) {
@@ -40,7 +47,7 @@ function ProductImage({ product, onImageLoadError }) {
           src={imageUrl}
           alt={product.nombre}
           loading="eager"
-          fetchPriority="high"
+          fetchpriority="high"
           decoding="async"
           style={{ opacity: isLoaded ? 1 : 0 }}
           onLoad={() => setIsLoaded(true)}
@@ -75,12 +82,14 @@ export function CatalogFeature({
   loadMoreSentinelRef
 }) {
   const [failedImageIds, setFailedImageIds] = useState(() => new Set());
+  const [loadedImageIds, setLoadedImageIds] = useState(() => new Set());
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [isBebidasExpanded, setIsBebidasExpanded] = useState(false);
   const categoryMenuRef = useRef(null);
 
   useEffect(() => {
     setFailedImageIds(new Set());
+    setLoadedImageIds(new Set());
   }, [activeCategory, searchValue]);
 
   useEffect(() => {
@@ -111,21 +120,50 @@ export function CatalogFeature({
     });
   }
 
-  const sortedProducts = [...products].sort((a, b) => {
-    const aFailed = failedImageIds.has(Number(a?.id || 0));
-    const bFailed = failedImageIds.has(Number(b?.id || 0));
-    if (aFailed !== bFailed) {
-      return aFailed ? 1 : -1;
+  function handleImageLoaded(productId) {
+    if (!Number.isFinite(productId) || productId <= 0) {
+      return;
     }
 
-    const aHasImage = Boolean(a?.has_local_image);
-    const bHasImage = Boolean(b?.has_local_image);
-    if (aHasImage !== bHasImage) {
-      return aHasImage ? -1 : 1;
-    }
+    setLoadedImageIds((current) => {
+      if (current.has(productId)) {
+        return current;
+      }
+      const next = new Set(current);
+      next.add(productId);
+      return next;
+    });
+  }
 
-    return 0;
-  });
+  const sortedProducts = useMemo(() => {
+    const indexById = new Map(products.map((item, index) => [Number(item?.id || 0), index]));
+    const getRank = (item) => {
+      const id = Number(item?.id || 0);
+      const hasImage = Boolean(item?.has_local_image);
+      const failed = failedImageIds.has(id);
+      const loaded = loadedImageIds.has(id);
+
+      if (hasImage && loaded && !failed) {
+        return 0;
+      }
+      if (hasImage && !loaded && !failed) {
+        return 2;
+      }
+      if (hasImage && failed) {
+        return 3;
+      }
+      return 4;
+    };
+
+    return [...products].sort((a, b) => {
+      const rankA = getRank(a);
+      const rankB = getRank(b);
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
+      return (indexById.get(Number(a?.id || 0)) ?? 0) - (indexById.get(Number(b?.id || 0)) ?? 0);
+    });
+  }, [failedImageIds, loadedImageIds, products]);
 
   const bebidasSubcategories = useMemo(
     () => categories.filter((category) => {
@@ -256,7 +294,11 @@ export function CatalogFeature({
           <ul className="products-grid">
             {sortedProducts.map((product) => (
               <li key={product.id} className="product-card">
-                <ProductImage product={product} onImageLoadError={handleImageLoadError} />
+                <ProductImage
+                  product={product}
+                  onImageLoadError={handleImageLoadError}
+                  onImageLoaded={handleImageLoaded}
+                />
                 <strong className="product-card-name">{product.nombre}</strong>
                 <span className="product-card-price">${Number(product.precio_venta || 0).toFixed(2)}</span>
                 <button type="button" className="product-card-add" onClick={() => onIncreaseProduct(product)}>

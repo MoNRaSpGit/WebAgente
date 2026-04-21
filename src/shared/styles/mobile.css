@@ -1,0 +1,137 @@
+.mobile-bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  display: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.3rem;
+  padding: 0.45rem;
+  border-radius: 12px 12px 0 0;
+  border: 1px solid #d7e3f0;
+  border-bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 -4px 18px rgba(16, 42, 67, 0.1);
+  backdrop-filter: blur(6px);
+}
+
+.mobile-bottom-nav button {
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  padding: 0.5rem 0.3rem;
+  min-height: 56px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #486581;
+  display: grid;
+  place-items: center;
+  gap: 0.18rem;
+}
+
+.mobile-bottom-nav button span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.mobile-bottom-nav .mobile-bottom-nav-active {
+  background: #0f4c81;
+  color: #fff;
+}
+
+.mobile-nav-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #d9ecff;
+  color: #0f4c81;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0 5px;
+}
+
+@media (min-width: 900px) {
+  .home-shell {
+    padding: 1rem;
+  }
+
+  .home-card {
+    padding: 1rem;
+  }
+
+  .product-card-name {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .home-topbar {
+    grid-template-columns: 1fr auto;
+  }
+
+  .home-desktop-nav {
+    display: none;
+  }
+
+  .mobile-bottom-nav {
+    display: grid;
+  }
+
+  .home-card {
+    padding-bottom: 5.4rem;
+  }
+
+  .store-metrics {
+    flex-wrap: nowrap;
+  }
+}
+
+@media (max-width: 430px) {
+  .home-shell {
+    padding: 0.4rem;
+  }
+
+  .home-card {
+    padding: 0.6rem;
+    border-radius: 10px;
+    padding-bottom: 5.2rem;
+  }
+
+  .products-grid {
+    gap: 0.4rem;
+  }
+
+  .product-card {
+    padding: 0.35rem;
+    border-radius: 8px;
+  }
+
+  .product-card-name {
+    font-size: 0.68rem;
+    min-height: 2.2em;
+  }
+
+  .product-card-price {
+    font-size: 0.76rem;
+  }
+
+  .product-card-add {
+    font-size: 0.67rem;
+    padding: 0.3rem 0.2rem;
+  }
+
+  .cart-item {
+    grid-template-columns: 48px 1fr auto;
+    gap: 0.4rem;
+    padding: 0.5rem;
+  }
+
+  .cart-item-thumb {
+    width: 48px;
+    height: 48px;
+  }
+}

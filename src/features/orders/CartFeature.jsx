@@ -151,14 +151,14 @@ export function CartFeature({
         <div className="checkout-options-grid checkout-options-grid--two">
           {deliveryOptions.map(({ key, label, Icon }) => {
             const selected = deliveryMode === key;
-            const disabled = key === 'delivery' && !deliveryEnabled;
+            const deliveryBlocked = key === 'delivery' && !deliveryEnabled;
             return (
               <button
                 key={key}
                 type="button"
-                className={`checkout-option ${selected ? 'checkout-option--selected' : ''}`}
+                className={`checkout-option ${selected ? 'checkout-option--selected' : ''} ${deliveryBlocked ? 'checkout-option--blocked' : ''}`}
                 onClick={() => onSelectDeliveryMode?.(key)}
-                disabled={disabled}
+                aria-disabled={deliveryBlocked}
               >
                 <span className="checkout-option-icon">
                   <Icon size={15} />

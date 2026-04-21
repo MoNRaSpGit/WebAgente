@@ -109,7 +109,7 @@ export function CartFeature({
       <section className="checkout-options-block">
         <h3 className="checkout-options-title">Entrega</h3>
         {!deliveryEnabled ? (
-          <p className="checkout-options-hint">Delivery disponible desde $200.</p>
+          <p className="checkout-options-hint">Delivery habilitado con compra igual o mayor a $200.</p>
         ) : null}
         <div className="checkout-options-grid checkout-options-grid--two">
           {deliveryOptions.map(({ key, label, Icon }) => {

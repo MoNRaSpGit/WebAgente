@@ -2,13 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { fetchWebCategories, fetchWebProducts } from '../../../shared/api/productsApi.js';
 import { fetchMyWebOrders } from '../../../shared/api/webOrdersApi.js';
 import { fetchMyWebProfile } from '../../../shared/api/webUsersApi.js';
-import { CATEGORY_ALL, CATEGORY_OTHER } from '../../home/home.constants.js';
+import {
+  CATEGORY_ALL,
+  CATEGORY_OTHER,
+  WEB_PRODUCTS_FIRST_VISIBLE_COUNT,
+  WEB_PRODUCTS_LOAD_MORE_STEP,
+  WEB_PRODUCTS_MAX_PAGES,
+  WEB_PRODUCTS_PAGE_LIMIT
+} from '../../home/home.constants.js';
 import { normalizeSearchText } from '../../home/home.utils.js';
-
-const PAGE_LIMIT = 500;
-const MAX_PAGES = 20;
-const FIRST_VISIBLE_COUNT = 12;
-const LOAD_MORE_STEP = 12;
 
 function compactCategory(value) {
   return String(value || '')
@@ -44,7 +46,7 @@ export function useCatalogDataV2({
   const [activeCategory, setActiveCategory] = useState(CATEGORY_ALL);
   const [lastFetchMs, setLastFetchMs] = useState(0);
   const [knownCategories, setKnownCategories] = useState([]);
-  const [visibleProductsCount, setVisibleProductsCount] = useState(FIRST_VISIBLE_COUNT);
+  const [visibleProductsCount, setVisibleProductsCount] = useState(WEB_PRODUCTS_FIRST_VISIBLE_COUNT);
 
   const loadMoreSentinelRef = useRef(null);
 
@@ -112,9 +114,9 @@ export function useCatalogDataV2({
         let offset = 0;
         const allProducts = [];
 
-        for (let page = 0; page < MAX_PAGES; page += 1) {
+        for (let page = 0; page < WEB_PRODUCTS_MAX_PAGES; page += 1) {
           const result = await fetchWebProducts({
-            limit: PAGE_LIMIT,
+            limit: WEB_PRODUCTS_PAGE_LIMIT,
             offset,
             category: ''
           });
@@ -141,7 +143,7 @@ export function useCatalogDataV2({
         const uniqueProducts = uniqueByProductId(allProducts);
         setProducts(uniqueProducts);
         setLastFetchMs(Math.round(performance.now() - startAt));
-        setVisibleProductsCount(FIRST_VISIBLE_COUNT);
+        setVisibleProductsCount(WEB_PRODUCTS_FIRST_VISIBLE_COUNT);
 
         const uniqueCategories = [];
         const seenCategories = new Set();
@@ -177,7 +179,7 @@ export function useCatalogDataV2({
   }, [onBootstrapOrders, onBootstrapProfile, token]);
 
   useEffect(() => {
-    setVisibleProductsCount(FIRST_VISIBLE_COUNT);
+    setVisibleProductsCount(WEB_PRODUCTS_FIRST_VISIBLE_COUNT);
   }, [searchTerm, activeCategory]);
 
   useEffect(() => {
@@ -201,7 +203,7 @@ export function useCatalogDataV2({
         if (current >= filteredProducts.length) {
           return current;
         }
-        return Math.min(filteredProducts.length, current + LOAD_MORE_STEP);
+        return Math.min(filteredProducts.length, current + WEB_PRODUCTS_LOAD_MORE_STEP);
       });
     }, { rootMargin: '260px' });
 

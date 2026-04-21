@@ -1,4 +1,4 @@
-const CACHE_NAME = 'webagente-cache-v3';
+const CACHE_NAME = 'webagente-cache-v4';
 const SW_SCOPE_PATH = self.location.pathname.replace(/sw\.js$/, '');
 const INDEX_FALLBACK = `${SW_SCOPE_PATH}index.html`;
 const APP_SHELL = [

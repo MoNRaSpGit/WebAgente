@@ -35,6 +35,7 @@ export function useCatalogData({
   const hasBootstrappedRef = useRef(false);
   const skipFirstCategoryReloadRef = useRef(true);
   const productCacheByCategoryRef = useRef(new Map());
+  const currentCategoryKeyRef = useRef('');
 
   const normalizedSearch = useMemo(() => normalizeSearchText(searchTerm), [searchTerm]);
   const searchTokens = useMemo(
@@ -47,6 +48,10 @@ export function useCatalogData({
       : String(activeCategory || '').toLowerCase().replace(/\s+/g, ' ').trim()),
     [activeCategory]
   );
+
+  useEffect(() => {
+    currentCategoryKeyRef.current = String(normalizedActiveCategory || '');
+  }, [normalizedActiveCategory]);
   const knownCategoriesNormalized = useMemo(
     () => new Set(
       knownCategories
@@ -112,14 +117,20 @@ export function useCatalogData({
     reset = false,
     categoryOverride = normalizedActiveCategory
   } = {}) => {
-    if (!reset && (!productsHasMore || productsLoadingMore)) {
+    const cacheKey = String(categoryOverride || '');
+    const categoryCache = productCacheByCategoryRef.current.get(cacheKey);
+    const effectiveHasMore = categoryCache ? Boolean(categoryCache.hasMore) : productsHasMore;
+    const effectiveOffset = Number.isFinite(offsetOverride)
+      ? Math.max(0, Math.floor(offsetOverride))
+      : Number(categoryCache?.offset ?? productsOffset);
+
+    if (!reset && (!effectiveHasMore || productsLoadingMore)) {
       return;
     }
 
     setProductsLoadingMore(true);
-    const requestOffset = Number.isFinite(offsetOverride)
-      ? Math.max(0, Math.floor(offsetOverride))
-      : productsOffset;
+    const requestOffset = Math.max(0, Math.floor(effectiveOffset || 0));
+    const requestCategoryKey = cacheKey;
 
     try {
       const startAt = performance.now();
@@ -131,27 +142,25 @@ export function useCatalogData({
       setLastFetchMs(Math.round(performance.now() - startAt));
 
       let mergedItems = result.items;
-      setProducts((current) => {
-        if (reset || requestOffset === 0) {
-          mergedItems = result.items;
-          return result.items;
-        }
-        const nextItems = [...current, ...result.items];
-        mergedItems = nextItems;
-        return nextItems;
-      });
+      const currentCache = productCacheByCategoryRef.current.get(requestCategoryKey);
+      const baseItems = (reset || requestOffset === 0)
+        ? []
+        : Array.isArray(currentCache?.items) ? currentCache.items : [];
+      mergedItems = [...baseItems, ...result.items];
 
       const nextOffset = requestOffset + result.items.length;
       const nextHasMore = Boolean(result.page?.has_more);
-      const cacheKey = String(categoryOverride || '');
-      productCacheByCategoryRef.current.set(cacheKey, {
+      productCacheByCategoryRef.current.set(requestCategoryKey, {
         items: mergedItems,
         offset: nextOffset,
         hasMore: nextHasMore
       });
 
-      setProductsOffset(nextOffset);
-      setProductsHasMore(nextHasMore);
+      if (requestCategoryKey === currentCategoryKeyRef.current) {
+        setProducts(mergedItems);
+        setProductsOffset(nextOffset);
+        setProductsHasMore(nextHasMore);
+      }
     } catch (loadError) {
       if (!silent) {
         setError(loadError.message);
@@ -308,6 +317,9 @@ export function useCatalogData({
       if (!first?.isIntersecting) {
         return;
       }
+      if (loading || filteredProducts.length === 0) {
+        return;
+      }
 
       setVisibleProductsCount((current) => Math.min(products.length, current + 9));
       if (visibleProductsCount + 9 >= filteredProducts.length && productsHasMore && loadNextPageRef.current) {
@@ -317,7 +329,7 @@ export function useCatalogData({
 
     observer.observe(loadMoreSentinelRef.current);
     return () => observer.disconnect();
-  }, [activeView, filteredProducts.length, products.length, productsHasMore, visibleProductsCount]);
+  }, [activeView, filteredProducts.length, loading, products.length, productsHasMore, visibleProductsCount]);
 
   return {
     loading,

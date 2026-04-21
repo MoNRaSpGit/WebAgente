@@ -262,6 +262,27 @@ export function useCatalogDataV2({
     return () => observer.disconnect();
   }, [activeView, filteredProducts.length, loading]);
 
+  function applyLocalProductPatch(productId, patch = {}) {
+    const parsedId = Number(productId || 0);
+    if (!Number.isFinite(parsedId) || parsedId <= 0) {
+      return;
+    }
+
+    setProducts((current) => current.map((item) => (
+      Number(item?.id) === parsedId
+        ? { ...item, ...patch }
+        : item
+    )));
+
+    const nextCategory = String(patch?.categoria || '').trim();
+    if (nextCategory) {
+      setKnownCategories((current) => {
+        const exists = current.some((category) => compactCategory(category) === compactCategory(nextCategory));
+        return exists ? current : [...current, nextCategory];
+      });
+    }
+  }
+
   return {
     loading,
     error,
@@ -275,6 +296,7 @@ export function useCatalogDataV2({
     productsLoadingMore: visibleProductsCount < filteredProducts.length,
     filteredProducts,
     visibleProducts,
-    loadMoreSentinelRef
+    loadMoreSentinelRef,
+    applyLocalProductPatch
   };
 }

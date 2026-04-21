@@ -105,3 +105,16 @@ Usar esta lista antes de cerrar una sesion y hacer deploy:
 6. Build y calidad minima:
 - Back: `npm run lint` OK.
 - Web: `npm run build` OK.
+
+## Rollback de velocidad estable
+
+Referencia para volver al punto estable anterior al ajuste de carga progresiva del catalogo.
+
+- Repo: `WebAgente`
+- Branch: `main`
+- Commit estable: `5850742` (`refactor(web): centralize catalog paging constants`)
+- Commit del cambio de carga progresiva: `f14c91f` (`perf(catalog): load first page fast and hydrate remaining pages in background`)
+
+Comportamiento tecnico:
+- En `5850742`: bootstrap mas bloqueante (carga mas paginas antes de mostrar completo).
+- En `f14c91f`: primera pagina rapida + hidratacion en background.

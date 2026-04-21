@@ -10,6 +10,7 @@ import { HomeTopbar } from './components/HomeTopbar.jsx';
 import { useCatalogDataV2 } from '../../features/catalogV2/hooks/useCatalogDataV2.js';
 import { useInactiveProducts } from './hooks/useInactiveProducts.js';
 import { useMyOrdersRealtime } from './hooks/useMyOrdersRealtime.js';
+import { updateWebAdminProduct } from '../../shared/api/productsApi.js';
 
 const CHECKOUT_PREFS_KEY_PREFIX = 'webagente.checkoutPrefs.v1';
 
@@ -73,6 +74,9 @@ export function HomeFeature() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
   const [deliveryMode, setDeliveryMode] = useState('pickup');
+  const [editingCategoryProductId, setEditingCategoryProductId] = useState(null);
+  const [editingCategoryValue, setEditingCategoryValue] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
   const userMenuRef = useRef(null);
   const deliveryEnabled = true;
 
@@ -88,7 +92,8 @@ export function HomeFeature() {
     productsLoadingMore,
     filteredProducts,
     visibleProducts,
-    loadMoreSentinelRef
+    loadMoreSentinelRef,
+    applyLocalProductPatch
   } = useCatalogDataV2({
     token,
     activeView,
@@ -97,19 +102,27 @@ export function HomeFeature() {
   });
 
   const cartList = Object.values(cartItems);
+  const editableCategories = useMemo(
+    () => categories.filter((category) => category !== 'all' && category !== '__other__'),
+    [categories]
+  );
   const cartTotal = cartList.reduce(
     (sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0),
     0
   );
   const cartCount = cartList.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const userPoints = Number(myProfile?.puntos_actuales || 0);
   const cartProductIds = useMemo(
     () => new Set(Object.keys(cartItems).map((key) => Number(key)).filter((id) => Number.isFinite(id) && id > 0)),
     [cartItems]
   );
   const canUseDelivery = deliveryEnabled && cartTotal >= 200;
+  const pointsRequired = Math.ceil(cartTotal);
+  const hasEnoughPoints = userPoints >= pointsRequired;
   const canSubmitOrder = cartList.length > 0
     && Boolean(paymentMethod)
     && Boolean(deliveryMode)
+    && (paymentMethod !== 'puntos' || hasEnoughPoints)
     && (deliveryMode !== 'delivery' || canUseDelivery);
   const isAdmin = String(user?.role || '').toLowerCase() === 'admin';
   const {
@@ -207,6 +220,46 @@ export function HomeFeature() {
     });
   }
 
+  function openEditProductCategory(product) {
+    const productId = Number(product?.id || 0);
+    if (!Number.isFinite(productId) || productId <= 0) {
+      return;
+    }
+    setEditingCategoryProductId(productId);
+    setEditingCategoryValue(String(product?.categoria || '').trim());
+  }
+
+  function closeEditProductCategory(force = false) {
+    if (savingCategory && !force) {
+      return;
+    }
+    setEditingCategoryProductId(null);
+    setEditingCategoryValue('');
+  }
+
+  async function submitEditProductCategory() {
+    const productId = Number(editingCategoryProductId || 0);
+    const nextCategory = String(editingCategoryValue || '').trim();
+    if (!Number.isFinite(productId) || productId <= 0) {
+      return;
+    }
+    if (!nextCategory) {
+      setError('Categoria requerida');
+      return;
+    }
+
+    try {
+      setSavingCategory(true);
+      await updateWebAdminProduct(token, productId, { categoria: nextCategory });
+      applyLocalProductPatch(productId, { categoria: nextCategory });
+      closeEditProductCategory(true);
+    } catch (updateError) {
+      setError(updateError.message || 'No se pudo actualizar la categoria');
+    } finally {
+      setSavingCategory(false);
+    }
+  }
+
   async function submitOrder() {
     if (cartList.length === 0) {
       return;
@@ -219,8 +272,12 @@ export function HomeFeature() {
       setError('Selecciona tipo de entrega');
       return;
     }
+    if (paymentMethod === 'puntos' && !hasEnoughPoints) {
+      setError('No tiene puntos suficiente');
+      return;
+    }
     if (deliveryMode === 'delivery' && !canUseDelivery) {
-      setError('Delivery disponible desde $200');
+      setError('Delivery habilitado con compra igual o mayor a $200');
       return;
     }
 
@@ -374,10 +431,12 @@ export function HomeFeature() {
             activeCategory={activeCategory}
             points={Number(myProfile?.puntos_actuales || 0)}
             deliveryEnabled={deliveryEnabled}
+            isAdmin={isAdmin}
             selectedProductIds={cartProductIds}
             onSearchChange={setSearchTerm}
             onSelectCategory={setActiveCategory}
             onIncreaseProduct={increaseProduct}
+            onEditProductCategory={openEditProductCategory}
             loadMoreSentinelRef={loadMoreSentinelRef}
           />
         ) : null}
@@ -388,6 +447,7 @@ export function HomeFeature() {
             total={cartTotal}
             paymentMethod={paymentMethod}
             deliveryMode={deliveryMode}
+            userPoints={userPoints}
             deliveryEnabled={canUseDelivery}
             canSubmit={canSubmitOrder}
             savingOrder={savingOrder}
@@ -428,6 +488,39 @@ export function HomeFeature() {
           onChangeView={setActiveView}
         />
       </section>
+
+      {editingCategoryProductId ? (
+        <div className="modal-backdrop" onClick={closeEditProductCategory}>
+          <section className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <h3>Editar categoria</h3>
+            <div className="modal-form">
+              <label>
+                Categoria
+                <select
+                  value={editingCategoryValue}
+                  onChange={(event) => setEditingCategoryValue(event.target.value)}
+                  disabled={savingCategory}
+                >
+                  <option value="">Seleccionar categoria</option>
+                  {editableCategories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="modal-actions">
+                <button type="button" onClick={closeEditProductCategory} disabled={savingCategory}>
+                  Cancelar
+                </button>
+                <button type="button" onClick={submitEditProductCategory} disabled={savingCategory}>
+                  {savingCategory ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }

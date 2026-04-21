@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { buildWebProductImageSrc } from '../../shared/api/productsApi.js';
 import { Banknote, BookUser, Check, Gift, Landmark, Truck, UserRoundCheck } from 'lucide-react';
 
@@ -6,6 +7,7 @@ export function CartFeature({
   total,
   paymentMethod,
   deliveryMode,
+  userPoints,
   deliveryEnabled,
   canSubmit,
   savingOrder,
@@ -15,6 +17,10 @@ export function CartFeature({
   onDecreaseProduct,
   onSubmitOrder
 }) {
+  const [paymentHint, setPaymentHint] = useState('');
+  const pointsRequired = useMemo(() => Math.ceil(Number(total || 0)), [total]);
+  const hasEnoughPoints = Number(userPoints || 0) >= pointsRequired;
+
   const paymentOptions = [
     { key: 'pos', label: 'POS', Icon: Landmark },
     { key: 'efectivo', label: 'Efectivo', Icon: Banknote },
@@ -25,6 +31,15 @@ export function CartFeature({
     { key: 'delivery', label: 'Delivery', Icon: Truck },
     { key: 'pickup', label: 'Yo voy', Icon: UserRoundCheck }
   ];
+
+  function handleSelectPaymentMethod(key) {
+    if (key === 'puntos' && !hasEnoughPoints) {
+      setPaymentHint('No tiene puntos suficiente');
+      return;
+    }
+    setPaymentHint('');
+    onSelectPaymentMethod?.(key);
+  }
 
   function CartItemImage({ item }) {
     const src = buildWebProductImageSrc(item?.product_id);
@@ -83,15 +98,22 @@ export function CartFeature({
 
       <section className="checkout-options-block">
         <h3 className="checkout-options-title">Tipo de pago</h3>
+        {!hasEnoughPoints ? (
+          <p className="checkout-options-hint">
+            No tiene puntos suficiente (requiere {pointsRequired}, tiene {Number(userPoints || 0)}).
+          </p>
+        ) : null}
+        {paymentHint ? <p className="checkout-options-hint">{paymentHint}</p> : null}
         <div className="checkout-options-grid">
           {paymentOptions.map(({ key, label, Icon }) => {
             const selected = paymentMethod === key;
+            const pointsBlocked = key === 'puntos' && !hasEnoughPoints;
             return (
               <button
                 key={key}
                 type="button"
-                className={`checkout-option ${selected ? 'checkout-option--selected' : ''}`}
-                onClick={() => onSelectPaymentMethod?.(key)}
+                className={`checkout-option ${selected ? 'checkout-option--selected' : ''} ${pointsBlocked ? 'checkout-option--blocked' : ''}`}
+                onClick={() => handleSelectPaymentMethod(key)}
               >
                 <span className="checkout-option-icon">
                   <Icon size={15} />

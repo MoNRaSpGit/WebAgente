@@ -163,6 +163,10 @@
   cursor: not-allowed;
 }
 
+.checkout-option--blocked {
+  opacity: 0.62;
+}
+
 .checkout-option-icon {
   width: 20px;
   height: 20px;

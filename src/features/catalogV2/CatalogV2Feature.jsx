@@ -14,10 +14,12 @@ export function CatalogV2Feature({
   activeCategory,
   points,
   deliveryEnabled,
+  isAdmin,
   selectedProductIds,
   onSearchChange,
   onSelectCategory,
   onIncreaseProduct,
+  onEditProductCategory,
   loadMoreSentinelRef
 }) {
   const [toastMessage, setToastMessage] = useState('');
@@ -268,6 +270,15 @@ export function CatalogV2Feature({
                 >
                   {selectedProductIds?.has(Number(product.id)) ? 'En carrito' : 'Agregar'}
                 </button>
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    className="product-card-edit"
+                    onClick={() => onEditProductCategory?.(product)}
+                  >
+                    Editar
+                  </button>
+                ) : null}
               </li>
             ))}
           </ul>

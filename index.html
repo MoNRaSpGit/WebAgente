@@ -18,102 +18,11 @@
         min-height: 100%;
         background: #eef5ff;
       }
-      .boot-shell {
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        padding: 1rem;
-        background:
-          radial-gradient(circle at 20% 15%, rgba(66, 153, 225, 0.22), transparent 34%),
-          radial-gradient(circle at 80% 82%, rgba(99, 179, 237, 0.18), transparent 34%),
-          linear-gradient(145deg, #f7fbff 0%, #eef5ff 42%, #f8fbff 100%);
-      }
-      .boot-card {
-        width: min(100%, 420px);
-        border: 1px solid #d4e3f7;
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.92);
-        box-shadow: 0 14px 36px rgba(15, 76, 129, 0.18);
-        padding: 1.2rem 1rem 1rem;
-        text-align: center;
-      }
-      .boot-logo-wrap {
-        position: relative;
-        width: 88px;
-        height: 88px;
-        margin: 0 auto 0.9rem;
-        display: grid;
-        place-items: center;
-      }
-      .boot-logo-ring {
-        position: absolute;
-        inset: 0;
-        border-radius: 50%;
-        border: 3px solid rgba(66, 153, 225, 0.35);
-        border-top-color: #1d5fa6;
-        animation: boot-spin 1.2s linear infinite;
-      }
-      .boot-logo {
-        width: 62px;
-        height: 62px;
-        border-radius: 16px;
-        display: grid;
-        place-items: center;
-        font-size: 1rem;
-        font-weight: 700;
-        color: #fff;
-        background: linear-gradient(135deg, #123963, #1f6fb8);
-        box-shadow: 0 10px 18px rgba(15, 76, 129, 0.28);
-      }
-      .boot-title {
-        margin: 0 0 0.34rem;
-        color: #102a43;
-        font-size: 1.3rem;
-      }
-      .boot-subtitle {
-        margin: 0;
-        color: #486581;
-        font-size: 0.88rem;
-      }
-      .boot-loader {
-        margin: 1rem auto 0;
-        width: min(90%, 280px);
-        height: 9px;
-        border-radius: 999px;
-        background: #dbe9f7;
-        overflow: hidden;
-      }
-      .boot-loader > span {
-        display: block;
-        width: 40%;
-        height: 100%;
-        border-radius: inherit;
-        background: linear-gradient(90deg, #1b5e9f, #54a3df);
-        animation: boot-slide 1.4s ease-in-out infinite;
-      }
-      @keyframes boot-spin { to { transform: rotate(360deg); } }
-      @keyframes boot-slide {
-        0% { transform: translateX(-120%); }
-        50% { transform: translateX(140%); }
-        100% { transform: translateX(-120%); }
-      }
     </style>
-    <script type="module" crossorigin src="/WebAgente/assets/index-TaK6l3Is.js"></script>
-    <link rel="stylesheet" crossorigin href="/WebAgente/assets/index-D_gS1rqH.css">
+    <script type="module" crossorigin src="/WebAgente/assets/index-CoEKemMj.js"></script>
+    <link rel="stylesheet" crossorigin href="/WebAgente/assets/index-lJPVJ_d6.css">
   </head>
   <body>
-    <div id="root">
-      <main class="boot-shell">
-        <section class="boot-card">
-          <div class="boot-logo-wrap">
-            <span class="boot-logo-ring"></span>
-            <span class="boot-logo">WP</span>
-          </div>
-          <h1 class="boot-title">Web Piloto</h1>
-          <p class="boot-subtitle">Preparando tu espacio...</p>
-          <div class="boot-loader"><span></span></div>
-        </section>
-      </main>
-    </div>
+    <div id="root"></div>
   </body>
 </html>

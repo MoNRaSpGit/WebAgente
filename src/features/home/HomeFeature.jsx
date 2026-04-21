@@ -4,6 +4,7 @@ import { InactiveProductsFeature } from '../../features/catalog/InactiveProducts
 import { CartFeature } from '../../features/orders/CartFeature.jsx';
 import { MyOrdersFeature } from '../../features/orders/MyOrdersFeature.jsx';
 import { createWebOrder, hideMyWebOrder } from '../../shared/api/webOrdersApi.js';
+import { sendWebWhatsappTest } from '../../shared/api/webNotificationsApi.js';
 import { useWebAuth } from '../../shared/auth/WebAuthProvider.jsx';
 import { HomeMobileNav } from './components/HomeMobileNav.jsx';
 import { HomeTopbar } from './components/HomeTopbar.jsx';
@@ -13,6 +14,7 @@ import { useMyOrdersRealtime } from './hooks/useMyOrdersRealtime.js';
 
 export function HomeFeature() {
   const { profile, user, token, logout } = useWebAuth();
+  const manualWhatsappTo = String(import.meta.env.VITE_WHATSAPP_MANUAL_TO || '').replace(/[^\d]/g, '');
 
   const [myOrders, setMyOrders] = useState([]);
   const [myProfile, setMyProfile] = useState(profile || null);
@@ -21,6 +23,7 @@ export function HomeFeature() {
   const [cartItems, setCartItems] = useState({});
   const [activeView, setActiveView] = useState('catalog');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [sendingWhatsappTest, setSendingWhatsappTest] = useState(false);
   const userMenuRef = useRef(null);
 
   const {
@@ -193,6 +196,34 @@ export function HomeFeature() {
     }
   }
 
+  async function handleSendWhatsappTest() {
+    if (!isAdmin || !token || sendingWhatsappTest) {
+      return;
+    }
+
+    setSendingWhatsappTest(true);
+    try {
+      const result = await sendWebWhatsappTest(token, { message: 'hola desde la web' });
+      const to = String(result?.to || '');
+      window.alert(to ? `WhatsApp de prueba enviado a ${to}` : 'WhatsApp de prueba enviado');
+    } catch (sendError) {
+      setError(sendError.message || 'No se pudo enviar WhatsApp de prueba');
+    } finally {
+      setSendingWhatsappTest(false);
+    }
+  }
+
+  function handleSendWhatsappManual() {
+    if (!manualWhatsappTo) {
+      setError('Configura VITE_WHATSAPP_MANUAL_TO en WebAgente/.env');
+      return;
+    }
+
+    const message = encodeURIComponent('hola desde la web');
+    const url = `https://wa.me/${manualWhatsappTo}?text=${message}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
   return (
     <main className="home-shell">
       <section className="home-card home-card--wide">
@@ -207,6 +238,9 @@ export function HomeFeature() {
           onToggleUserMenu={() => setUserMenuOpen((current) => !current)}
           onCloseUserMenu={() => setUserMenuOpen(false)}
           userMenuRef={userMenuRef}
+          onSendWhatsappTest={handleSendWhatsappTest}
+          onSendWhatsappManual={handleSendWhatsappManual}
+          sendingWhatsappTest={sendingWhatsappTest}
         />
 
         {activeView === 'catalog' ? (

@@ -114,6 +114,26 @@
   font-size: 0.76rem;
 }
 
+.home-user-dropdown-test {
+  border: 1px solid #8dc5a3 !important;
+  background: #f0fff5 !important;
+  color: #14532d !important;
+  margin-bottom: 0.38rem;
+}
+
+.home-user-dropdown-manual {
+  border: 1px solid #f2c37e !important;
+  background: #fffaf0 !important;
+  color: #8a4b00 !important;
+  margin-bottom: 0.38rem;
+}
+
+.home-user-dropdown-logout {
+  border: 1px solid #e8b7b7 !important;
+  background: #fff6f6 !important;
+  color: #9b1c1c !important;
+}
+
 .store-brand-logo {
   width: 32px;
   height: 32px;

@@ -47,15 +47,11 @@ export function CatalogV2Feature({
   }, []);
 
   function toCategoryLabel(value) {
-    const normalized = normalizeCategoryKey(value);
     if (value === 'all') {
       return 'Todas';
     }
     if (value === '__other__') {
       return 'Otros';
-    }
-    if (normalized === 'cuidadoyhigiene') {
-      return 'Cuidados';
     }
     return value;
   }

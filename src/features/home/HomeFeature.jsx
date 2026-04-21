@@ -10,7 +10,7 @@ import { HomeTopbar } from './components/HomeTopbar.jsx';
 import { useCatalogDataV2 } from '../../features/catalogV2/hooks/useCatalogDataV2.js';
 import { useInactiveProducts } from './hooks/useInactiveProducts.js';
 import { useMyOrdersRealtime } from './hooks/useMyOrdersRealtime.js';
-import { fetchWebAdminProductById, updateWebAdminProduct } from '../../shared/api/productsApi.js';
+import { useAdminProductEditor } from './hooks/useAdminProductEditor.js';
 
 const CHECKOUT_PREFS_KEY_PREFIX = 'webagente.checkoutPrefs.v1';
 
@@ -62,15 +62,6 @@ function saveCheckoutPrefs(userId, paymentMethod, deliveryMode) {
   }
 }
 
-function toDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
-    reader.readAsDataURL(file);
-  });
-}
-
 export function HomeFeature() {
   const { profile, user, token, logout } = useWebAuth();
   const manualWhatsappTo = String(import.meta.env.VITE_WHATSAPP_MANUAL_TO || '').replace(/[^\d]/g, '');
@@ -83,20 +74,6 @@ export function HomeFeature() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
   const [deliveryMode, setDeliveryMode] = useState('pickup');
-  const [editingCategoryProductId, setEditingCategoryProductId] = useState(null);
-  const [editingCategoryForm, setEditingCategoryForm] = useState({
-    nombre: '',
-    precio_venta: '',
-    categoria: '',
-    imagen_base64: ''
-  });
-  const [editingCategoryOriginalValue, setEditingCategoryOriginalValue] = useState({
-    nombre: '',
-    precio_venta: '',
-    categoria: ''
-  });
-  const [loadingEditProduct, setLoadingEditProduct] = useState(false);
-  const [savingCategory, setSavingCategory] = useState(false);
   const userMenuRef = useRef(null);
   const deliveryEnabled = true;
 
@@ -122,18 +99,6 @@ export function HomeFeature() {
   });
 
   const cartList = Object.values(cartItems);
-  const editableCategories = useMemo(
-    () => categories.filter((category) => category !== 'all' && category !== '__other__'),
-    [categories]
-  );
-  const editableCategoriesWithCurrent = useMemo(() => {
-    const next = new Set(editableCategories);
-    const currentValue = String(editingCategoryOriginalValue?.categoria || '').trim();
-    if (currentValue) {
-      next.add(currentValue);
-    }
-    return Array.from(next);
-  }, [editableCategories, editingCategoryOriginalValue]);
   const cartTotal = cartList.reduce(
     (sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0),
     0
@@ -153,6 +118,23 @@ export function HomeFeature() {
     && (paymentMethod !== 'puntos' || hasEnoughPoints)
     && (deliveryMode !== 'delivery' || canUseDelivery);
   const isAdmin = String(user?.role || '').toLowerCase() === 'admin';
+  const {
+    editingProductId,
+    editingForm,
+    setEditingForm,
+    loadingEditProduct,
+    savingEditProduct,
+    editableCategoriesWithCurrent,
+    openEditor,
+    closeEditor,
+    onImageChange,
+    submitEditor
+  } = useAdminProductEditor({
+    token,
+    categories,
+    applyLocalProductPatch,
+    setError
+  });
   const {
     inactiveProducts,
     inactiveTotal,
@@ -246,152 +228,6 @@ export function HomeFeature() {
         }
       };
     });
-  }
-
-  function openEditProductCategory(product) {
-    const productId = Number(product?.id || 0);
-    if (!Number.isFinite(productId) || productId <= 0) {
-      return;
-    }
-    const currentCategory = String(product?.categoria || '').trim();
-    const currentName = String(product?.nombre || '').trim();
-    const currentPrice = Number(product?.precio_venta || 0);
-    setEditingCategoryProductId(productId);
-    setEditingCategoryForm({
-      nombre: currentName,
-      precio_venta: String(Number(currentPrice).toFixed(2)),
-      categoria: currentCategory,
-      imagen_base64: ''
-    });
-    setEditingCategoryOriginalValue({
-      nombre: currentName,
-      precio_venta: Number(currentPrice).toFixed(2),
-      categoria: currentCategory
-    });
-    setLoadingEditProduct(true);
-    fetchWebAdminProductById(token, productId)
-      .then((fresh) => {
-        if (!fresh) {
-          return;
-        }
-        const freshName = String(fresh?.nombre || '').trim();
-        const freshPrice = Number(fresh?.precio_venta || 0);
-        const freshCategory = String(fresh?.categoria || currentCategory).trim();
-        setEditingCategoryForm((current) => ({
-          ...current,
-          nombre: freshName,
-          precio_venta: String(Number(freshPrice).toFixed(2)),
-          categoria: freshCategory
-        }));
-        setEditingCategoryOriginalValue({
-          nombre: freshName,
-          precio_venta: Number(freshPrice).toFixed(2),
-          categoria: freshCategory
-        });
-      })
-      .catch(() => {
-        // Si no se puede refrescar el producto, seguimos con datos del catalogo.
-      })
-      .finally(() => {
-        setLoadingEditProduct(false);
-      });
-  }
-
-  function closeEditProductCategory(force = false) {
-    if (savingCategory && !force) {
-      return;
-    }
-    setEditingCategoryProductId(null);
-    setEditingCategoryForm({
-      nombre: '',
-      precio_venta: '',
-      categoria: '',
-      imagen_base64: ''
-    });
-    setEditingCategoryOriginalValue({
-      nombre: '',
-      precio_venta: '',
-      categoria: ''
-    });
-    setLoadingEditProduct(false);
-  }
-
-  async function handleEditProductImageChange(event) {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    try {
-      const imageData = await toDataUrl(file);
-      setEditingCategoryForm((current) => ({
-        ...current,
-        imagen_base64: imageData
-      }));
-    } catch (imageError) {
-      setError(imageError.message || 'No se pudo leer la imagen');
-    }
-  }
-
-  async function submitEditProductCategory() {
-    const productId = Number(editingCategoryProductId || 0);
-    const nextName = String(editingCategoryForm?.nombre || '').trim();
-    const nextPriceText = String(editingCategoryForm?.precio_venta || '').trim();
-    const nextCategory = String(editingCategoryForm?.categoria || '').trim();
-    const nextImageBase64 = String(editingCategoryForm?.imagen_base64 || '').trim();
-    const originalName = String(editingCategoryOriginalValue?.nombre || '').trim();
-    const originalPrice = String(editingCategoryOriginalValue?.precio_venta || '').trim();
-    const originalCategory = String(editingCategoryOriginalValue?.categoria || '').trim();
-    const parsedPrice = Number(nextPriceText);
-    if (!Number.isFinite(productId) || productId <= 0) {
-      return;
-    }
-    if (!nextName) {
-      setError('Nombre requerido');
-      return;
-    }
-    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      setError('Precio valido requerido');
-      return;
-    }
-    if (!nextCategory) {
-      setError('Categoria requerida');
-      return;
-    }
-
-    const patch = {};
-    if (nextName.toLowerCase() !== originalName.toLowerCase()) {
-      patch.nombre = nextName;
-    }
-    if (Number(parsedPrice).toFixed(2) !== Number(originalPrice || 0).toFixed(2)) {
-      patch.precio_venta = parsedPrice;
-    }
-    if (nextCategory.toLowerCase() !== originalCategory.toLowerCase()) {
-      patch.categoria = nextCategory;
-    }
-    if (nextImageBase64) {
-      patch.imagen_base64 = nextImageBase64;
-    }
-
-    if (Object.keys(patch).length === 0) {
-      closeEditProductCategory();
-      return;
-    }
-
-    try {
-      setSavingCategory(true);
-      await updateWebAdminProduct(token, productId, patch);
-      applyLocalProductPatch(productId, {
-        ...(patch.nombre ? { nombre: patch.nombre } : {}),
-        ...(typeof patch.precio_venta === 'number' ? { precio_venta: patch.precio_venta } : {}),
-        ...(patch.categoria ? { categoria: patch.categoria } : {}),
-        ...(patch.imagen_base64 ? { has_local_image: true } : {})
-      });
-      closeEditProductCategory(true);
-    } catch (updateError) {
-      setError(updateError.message || 'No se pudo actualizar el producto');
-    } finally {
-      setSavingCategory(false);
-    }
   }
 
   async function submitOrder() {
@@ -570,7 +406,7 @@ export function HomeFeature() {
             onSearchChange={setSearchTerm}
             onSelectCategory={setActiveCategory}
             onIncreaseProduct={increaseProduct}
-            onEditProductCategory={openEditProductCategory}
+            onEditProductCategory={openEditor}
             loadMoreSentinelRef={loadMoreSentinelRef}
           />
         ) : null}
@@ -623,20 +459,20 @@ export function HomeFeature() {
         />
       </section>
 
-      {editingCategoryProductId ? (
-        <div className="modal-backdrop" onClick={closeEditProductCategory}>
+      {editingProductId ? (
+        <div className="modal-backdrop" onClick={closeEditor}>
           <section className="modal-card" onClick={(event) => event.stopPropagation()}>
             <h3>Editar categoria</h3>
             <div className="modal-form">
               <label>
                 Nombre
                 <input
-                  value={editingCategoryForm.nombre}
-                  onChange={(event) => setEditingCategoryForm((current) => ({
+                  value={editingForm.nombre}
+                  onChange={(event) => setEditingForm((current) => ({
                     ...current,
                     nombre: event.target.value
                   }))}
-                  disabled={savingCategory || loadingEditProduct}
+                  disabled={savingEditProduct || loadingEditProduct}
                 />
               </label>
               <label>
@@ -645,23 +481,23 @@ export function HomeFeature() {
                   type="number"
                   min="0.01"
                   step="0.01"
-                  value={editingCategoryForm.precio_venta}
-                  onChange={(event) => setEditingCategoryForm((current) => ({
+                  value={editingForm.precio_venta}
+                  onChange={(event) => setEditingForm((current) => ({
                     ...current,
                     precio_venta: event.target.value
                   }))}
-                  disabled={savingCategory || loadingEditProduct}
+                  disabled={savingEditProduct || loadingEditProduct}
                 />
               </label>
               <label>
                 Categoria
                 <select
-                  value={editingCategoryForm.categoria}
-                  onChange={(event) => setEditingCategoryForm((current) => ({
+                  value={editingForm.categoria}
+                  onChange={(event) => setEditingForm((current) => ({
                     ...current,
                     categoria: event.target.value
                   }))}
-                  disabled={savingCategory || loadingEditProduct}
+                  disabled={savingEditProduct || loadingEditProduct}
                 >
                   <option value="">Seleccionar categoria</option>
                   {editableCategoriesWithCurrent.map((category) => (
@@ -676,16 +512,16 @@ export function HomeFeature() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={handleEditProductImageChange}
-                  disabled={savingCategory || loadingEditProduct}
+                  onChange={onImageChange}
+                  disabled={savingEditProduct || loadingEditProduct}
                 />
               </label>
               <div className="modal-actions">
-                <button type="button" onClick={closeEditProductCategory} disabled={savingCategory || loadingEditProduct}>
+                <button type="button" onClick={closeEditor} disabled={savingEditProduct || loadingEditProduct}>
                   Cancelar
                 </button>
-                <button type="button" onClick={submitEditProductCategory} disabled={savingCategory || loadingEditProduct}>
-                  {savingCategory ? 'Guardando...' : 'Guardar'}
+                <button type="button" onClick={submitEditor} disabled={savingEditProduct || loadingEditProduct}>
+                  {savingEditProduct ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
             </div>

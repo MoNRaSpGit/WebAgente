@@ -12,8 +12,7 @@ export function CatalogV2Feature({
   categories,
   activeCategory,
   points,
-  totalCompras,
-  lastFetchMs,
+  deliveryEnabled,
   selectedProductIds,
   onSearchChange,
   onSelectCategory,
@@ -74,10 +73,11 @@ export function CatalogV2Feature({
 
       <section className="store-metrics">
         <p>Puntos: {points}</p>
-        <p>Compras: {totalCompras}</p>
+        <p className={`store-metrics-delivery ${deliveryEnabled ? 'store-metrics-delivery--on' : 'store-metrics-delivery--off'}`}>
+          Delivery: {deliveryEnabled ? 'activo' : 'inactivo'}
+        </p>
         <p>Productos: {productsTotal}</p>
         <p>Carrito: {cartCount}</p>
-        <p>Fetch: {Number(lastFetchMs || 0)} ms</p>
       </section>
 
       <section className="catalog-v2-category-wrap">

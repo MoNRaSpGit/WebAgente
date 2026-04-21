@@ -1,15 +1,30 @@
 import { buildWebProductImageSrc } from '../../shared/api/productsApi.js';
+import { Banknote, BookUser, Check, Gift, Landmark, Truck, UserRoundCheck } from 'lucide-react';
 
 export function CartFeature({
   items,
   total,
-  orderNote,
+  paymentMethod,
+  deliveryMode,
+  deliveryEnabled,
   savingOrder,
-  onOrderNoteChange,
+  onSelectPaymentMethod,
+  onSelectDeliveryMode,
   onIncreaseProduct,
   onDecreaseProduct,
   onSubmitOrder
 }) {
+  const paymentOptions = [
+    { key: 'pos', label: 'POS', Icon: Landmark },
+    { key: 'efectivo', label: 'Efectivo', Icon: Banknote },
+    { key: 'cuenta', label: 'Cuenta', Icon: BookUser },
+    { key: 'puntos', label: 'Puntos', Icon: Gift }
+  ];
+  const deliveryOptions = [
+    { key: 'delivery', label: 'Delivery', Icon: Truck },
+    { key: 'pickup', label: 'Yo voy', Icon: UserRoundCheck }
+  ];
+
   function CartItemImage({ item }) {
     const src = buildWebProductImageSrc(item?.product_id);
     const hasImage = Boolean(item?.has_local_image && src);
@@ -65,14 +80,57 @@ export function CartFeature({
         <strong>${Number(total || 0).toFixed(2)}</strong>
       </p>
 
-      <label className="order-note">
-        Nota (opcional)
-        <input
-          value={orderNote}
-          onChange={(event) => onOrderNoteChange(event.target.value)}
-          placeholder="Ej: pasar despues de las 18:00"
-        />
-      </label>
+      <section className="checkout-options-block">
+        <h3 className="checkout-options-title">Tipo de pago</h3>
+        <div className="checkout-options-grid">
+          {paymentOptions.map(({ key, label, Icon }) => {
+            const selected = paymentMethod === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                className={`checkout-option ${selected ? 'checkout-option--selected' : ''}`}
+                onClick={() => onSelectPaymentMethod?.(key)}
+              >
+                <span className="checkout-option-icon">
+                  <Icon size={15} />
+                </span>
+                <span>{label}</span>
+                <span className={`checkout-option-check ${selected ? 'checkout-option-check--visible' : ''}`}>
+                  <Check size={14} />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="checkout-options-block">
+        <h3 className="checkout-options-title">Entrega</h3>
+        <div className="checkout-options-grid checkout-options-grid--two">
+          {deliveryOptions.map(({ key, label, Icon }) => {
+            const selected = deliveryMode === key;
+            const disabled = key === 'delivery' && !deliveryEnabled;
+            return (
+              <button
+                key={key}
+                type="button"
+                className={`checkout-option ${selected ? 'checkout-option--selected' : ''}`}
+                onClick={() => onSelectDeliveryMode?.(key)}
+                disabled={disabled}
+              >
+                <span className="checkout-option-icon">
+                  <Icon size={15} />
+                </span>
+                <span>{label}</span>
+                <span className={`checkout-option-check ${selected ? 'checkout-option-check--visible' : ''}`}>
+                  <Check size={14} />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       <button className="cart-submit-button" type="button" disabled={savingOrder || items.length === 0} onClick={onSubmitOrder}>
         {savingOrder ? 'Enviando...' : 'Enviar pedido'}

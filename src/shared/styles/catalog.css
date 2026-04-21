@@ -34,6 +34,18 @@
   white-space: nowrap;
 }
 
+.store-metrics-delivery--on {
+  border-color: #8bd6b3 !important;
+  background: #eefaf3 !important;
+  color: #18794e !important;
+}
+
+.store-metrics-delivery--off {
+  border-color: #f1b4b4 !important;
+  background: #fff1f1 !important;
+  color: #b42318 !important;
+}
+
 .store-categories {
   display: grid;
   gap: 0.2rem;

@@ -159,7 +159,7 @@
   }
 
   .store-metrics p:last-child {
-    display: none;
+    display: block;
   }
 
   .store-categories {

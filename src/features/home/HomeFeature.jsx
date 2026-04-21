@@ -18,11 +18,13 @@ export function HomeFeature() {
   const [myOrders, setMyOrders] = useState([]);
   const [myProfile, setMyProfile] = useState(profile || null);
   const [savingOrder, setSavingOrder] = useState(false);
-  const [orderNote, setOrderNote] = useState('');
   const [cartItems, setCartItems] = useState({});
   const [activeView, setActiveView] = useState('catalog');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('efectivo');
+  const [deliveryMode, setDeliveryMode] = useState('pickup');
   const userMenuRef = useRef(null);
+  const deliveryEnabled = true;
 
   const {
     loading,
@@ -33,7 +35,6 @@ export function HomeFeature() {
     activeCategory,
     setActiveCategory,
     categories,
-    lastFetchMs,
     productsLoadingMore,
     filteredProducts,
     visibleProducts,
@@ -140,7 +141,7 @@ export function HomeFeature() {
 
     try {
       const payload = {
-        notes: orderNote,
+        notes: '',
         items: cartList.map((item) => ({
           product_id: item.product_id,
           quantity: item.quantity
@@ -155,7 +156,7 @@ export function HomeFeature() {
       if (createdOrder) {
         setMyOrders((current) => [createdOrder, ...current].slice(0, 20));
       }
-      sendOrderToWhatsappManual(createdOrder, cartList, orderNote);
+      sendOrderToWhatsappManual(createdOrder, cartList, '', paymentMethod, deliveryMode);
 
       setMyProfile((current) => {
         if (!current) {
@@ -172,7 +173,8 @@ export function HomeFeature() {
       });
 
       setCartItems({});
-      setOrderNote('');
+      setPaymentMethod('efectivo');
+      setDeliveryMode('pickup');
       setActiveView('orders');
     } catch (submitError) {
       setError(submitError.message);
@@ -206,7 +208,7 @@ export function HomeFeature() {
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 
-  function sendOrderToWhatsappManual(order, items, note) {
+  function sendOrderToWhatsappManual(order, items, note, payment, delivery) {
     if (!manualWhatsappTo || !Array.isArray(items) || items.length === 0) {
       return;
     }
@@ -218,11 +220,15 @@ export function HomeFeature() {
       .map((item) => `- ${Number(item.quantity || 0)} x ${String(item.product_name || 'Producto').trim()}`)
       .join('\n');
     const noteText = String(note || '').trim();
+    const paymentText = String(payment || '').trim();
+    const deliveryText = String(delivery || '').trim();
 
     const lines = [
       'Nuevo pedido web',
       orderLine,
       `Cliente: ${customer}`,
+      `Pago: ${paymentText || '-'}`,
+      `Entrega: ${deliveryText || '-'}`,
       '',
       'Detalle:',
       itemsText
@@ -270,8 +276,7 @@ export function HomeFeature() {
             categories={categories}
             activeCategory={activeCategory}
             points={Number(myProfile?.puntos_actuales || 0)}
-            totalCompras={Number(myProfile?.total_compras || 0)}
-            lastFetchMs={lastFetchMs}
+            deliveryEnabled={deliveryEnabled}
             selectedProductIds={cartProductIds}
             onSearchChange={setSearchTerm}
             onSelectCategory={setActiveCategory}
@@ -284,9 +289,12 @@ export function HomeFeature() {
           <CartFeature
             items={cartList}
             total={cartTotal}
-            orderNote={orderNote}
+            paymentMethod={paymentMethod}
+            deliveryMode={deliveryMode}
+            deliveryEnabled={deliveryEnabled && cartTotal >= 200}
             savingOrder={savingOrder}
-            onOrderNoteChange={setOrderNote}
+            onSelectPaymentMethod={setPaymentMethod}
+            onSelectDeliveryMode={setDeliveryMode}
             onIncreaseProduct={increaseProduct}
             onDecreaseProduct={decreaseProduct}
             onSubmitOrder={submitOrder}

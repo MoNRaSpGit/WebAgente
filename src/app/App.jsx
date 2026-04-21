@@ -8,7 +8,6 @@ const SPLASH_BRAND_DELAY_MS = 1200;
 
 function AppLaunchScreen({ overlay = false, showBrand = false }) {
   const className = overlay ? 'launch-shell launch-shell--overlay' : 'launch-shell';
-  const iconSrc = `${import.meta.env.BASE_URL}icons/icon-192.png`;
 
   if (!showBrand) {
     return <main className={className} aria-hidden="true" />;
@@ -16,10 +15,16 @@ function AppLaunchScreen({ overlay = false, showBrand = false }) {
 
   return (
     <main className={className}>
-      <section className="launch-brand" aria-label="Cargando aplicacion">
-        <img className="launch-brand-icon" src={iconSrc} alt="Web Piloto" />
+      <section className="launch-card" aria-label="Cargando aplicacion">
+        <div className="launch-logo-wrap">
+          <span className="launch-logo-ring" />
+          <span className="launch-logo">WP</span>
+        </div>
         <h1>Web Piloto</h1>
         <p>Preparando tu espacio...</p>
+        <div className="launch-loader" role="presentation">
+          <span />
+        </div>
       </section>
     </main>
   );

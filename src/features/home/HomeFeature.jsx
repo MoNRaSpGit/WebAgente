@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CatalogFeature } from '../../features/catalog/CatalogFeature.jsx';
+import { CatalogV2Feature } from '../../features/catalogV2/CatalogV2Feature.jsx';
 import { InactiveProductsFeature } from '../../features/catalog/InactiveProductsFeature.jsx';
 import { CartFeature } from '../../features/orders/CartFeature.jsx';
 import { MyOrdersFeature } from '../../features/orders/MyOrdersFeature.jsx';
@@ -7,7 +7,7 @@ import { createWebOrder, hideMyWebOrder } from '../../shared/api/webOrdersApi.js
 import { useWebAuth } from '../../shared/auth/WebAuthProvider.jsx';
 import { HomeMobileNav } from './components/HomeMobileNav.jsx';
 import { HomeTopbar } from './components/HomeTopbar.jsx';
-import { useCatalogData } from './hooks/useCatalogData.js';
+import { useCatalogDataV2 } from '../../features/catalogV2/hooks/useCatalogDataV2.js';
 import { useInactiveProducts } from './hooks/useInactiveProducts.js';
 import { useMyOrdersRealtime } from './hooks/useMyOrdersRealtime.js';
 
@@ -38,7 +38,7 @@ export function HomeFeature() {
     filteredProducts,
     visibleProducts,
     loadMoreSentinelRef
-  } = useCatalogData({
+  } = useCatalogDataV2({
     token,
     activeView,
     onBootstrapOrders: setMyOrders,
@@ -259,7 +259,7 @@ export function HomeFeature() {
         />
 
         {activeView === 'catalog' ? (
-          <CatalogFeature
+          <CatalogV2Feature
             products={visibleProducts}
             productsTotal={filteredProducts.length}
             loading={loading}

@@ -1,0 +1,20 @@
+.catalog-v2-category-wrap {
+  display: grid;
+  gap: 0.32rem;
+  margin: 0.55rem 0 0.75rem;
+}
+
+.catalog-v2-category-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #334e68;
+}
+
+.catalog-v2-category-select {
+  border: 1px solid #c5d2e2;
+  border-radius: 10px;
+  background: #f8fbff;
+  color: #102a43;
+  font-size: 0.82rem;
+  padding: 0.5rem 0.62rem;
+}

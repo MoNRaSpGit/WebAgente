@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { CategoryMenu } from './components/CategoryMenu.jsx';
+import { useEffect, useRef, useState } from 'react';
 import { ProductImage } from './components/ProductImage.jsx';
 
-export function CatalogFeature({
+export function CatalogV2Feature({
   products,
   productsTotal,
   loading,
@@ -21,15 +20,8 @@ export function CatalogFeature({
   onIncreaseProduct,
   loadMoreSentinelRef
 }) {
-  const [failedImageIds, setFailedImageIds] = useState(() => new Set());
-  const [loadedImageIds, setLoadedImageIds] = useState(() => new Set());
   const [toastMessage, setToastMessage] = useState('');
   const toastTimeoutRef = useRef(null);
-
-  useEffect(() => {
-    setFailedImageIds(new Set());
-    setLoadedImageIds(new Set());
-  }, [activeCategory, searchValue]);
 
   useEffect(() => () => {
     if (toastTimeoutRef.current) {
@@ -37,65 +29,15 @@ export function CatalogFeature({
     }
   }, []);
 
-  function handleImageLoadError(productId) {
-    if (!Number.isFinite(productId) || productId <= 0) {
-      return;
+  function toCategoryLabel(value) {
+    if (value === 'all') {
+      return 'Todas';
     }
-
-    setFailedImageIds((current) => {
-      if (current.has(productId)) {
-        return current;
-      }
-      const next = new Set(current);
-      next.add(productId);
-      return next;
-    });
-  }
-
-  function handleImageLoaded(productId) {
-    if (!Number.isFinite(productId) || productId <= 0) {
-      return;
+    if (value === '__other__') {
+      return 'Otros';
     }
-
-    setLoadedImageIds((current) => {
-      if (current.has(productId)) {
-        return current;
-      }
-      const next = new Set(current);
-      next.add(productId);
-      return next;
-    });
+    return value;
   }
-
-  const sortedProducts = useMemo(() => {
-    const indexById = new Map(products.map((item, index) => [Number(item?.id || 0), index]));
-    const getRank = (item) => {
-      const id = Number(item?.id || 0);
-      const hasImage = Boolean(item?.has_local_image);
-      const failed = failedImageIds.has(id);
-      const loaded = loadedImageIds.has(id);
-
-      if (hasImage && loaded && !failed) {
-        return 0;
-      }
-      if (hasImage && !loaded && !failed) {
-        return 2;
-      }
-      if (hasImage && failed) {
-        return 3;
-      }
-      return 4;
-    };
-
-    return [...products].sort((a, b) => {
-      const rankA = getRank(a);
-      const rankB = getRank(b);
-      if (rankA !== rankB) {
-        return rankA - rankB;
-      }
-      return (indexById.get(Number(a?.id || 0)) ?? 0) - (indexById.get(Number(b?.id || 0)) ?? 0);
-    });
-  }, [failedImageIds, loadedImageIds, products]);
 
   function showToast(message) {
     if (toastTimeoutRef.current) {
@@ -138,11 +80,23 @@ export function CatalogFeature({
         <p>Fetch: {Number(lastFetchMs || 0)} ms</p>
       </section>
 
-      <CategoryMenu
-        categories={categories}
-        activeCategory={activeCategory}
-        onSelectCategory={onSelectCategory}
-      />
+      <section className="catalog-v2-category-wrap">
+        <label className="catalog-v2-category-label" htmlFor="catalog-v2-category">
+          Categoria
+        </label>
+        <select
+          id="catalog-v2-category"
+          className="catalog-v2-category-select"
+          value={activeCategory}
+          onChange={(event) => onSelectCategory(event.target.value)}
+        >
+          {categories.map((category) => (
+            <option key={category} value={category}>
+              {toCategoryLabel(category)}
+            </option>
+          ))}
+        </select>
+      </section>
 
       {error ? <p className="home-error">{error}</p> : null}
       {toastMessage ? <p className="catalog-toast">{toastMessage}</p> : null}
@@ -150,13 +104,11 @@ export function CatalogFeature({
       {!loading && !error ? (
         <>
           <ul className="products-grid">
-            {sortedProducts.map((product, index) => (
+            {products.map((product, index) => (
               <li key={product.id} className="product-card">
                 <ProductImage
                   product={product}
                   priority={index < 12}
-                  onImageLoadError={handleImageLoadError}
-                  onImageLoaded={handleImageLoaded}
                 />
                 <strong className="product-card-name">{product.nombre}</strong>
                 <span className="product-card-price">${Number(product.precio_venta || 0).toFixed(2)}</span>

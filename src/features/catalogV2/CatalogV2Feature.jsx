@@ -293,7 +293,6 @@ export function CatalogV2Feature({
                   product={product}
                   priority={index < 12}
                   prefetchedImageSrc={prefetchedImageMap?.[product.id] || ''}
-                  disableNetworkFetch
                   onImageLoaded={(productId) => {
                     const id = Number(productId || 0);
                     if (!Number.isFinite(id) || id <= 0) {

@@ -4,6 +4,7 @@ import { canHideOrder, normalizeOrderStatus } from './orderRealtime.js';
 export function MyOrdersFeature({ orders, loading, onHideOrder }) {
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [showAllOrders, setShowAllOrders] = useState(false);
+  const [repeatPreviewOrderId, setRepeatPreviewOrderId] = useState(null);
   const hasHiddenOrders = orders.length > 2;
   const visibleOrders = useMemo(
     () => (showAllOrders ? orders : orders.slice(0, 2)),
@@ -15,6 +16,16 @@ export function MyOrdersFeature({ orders, loading, onHideOrder }) {
       setShowAllOrders(false);
     }
   }, [hasHiddenOrders]);
+
+  useEffect(() => {
+    if (!repeatPreviewOrderId) {
+      return;
+    }
+    const exists = orders.some((item) => Number(item?.id) === Number(repeatPreviewOrderId));
+    if (!exists) {
+      setRepeatPreviewOrderId(null);
+    }
+  }, [orders, repeatPreviewOrderId]);
 
   function toOrderStatusLabel(status) {
     const normalized = normalizeOrderStatus(status);
@@ -99,6 +110,13 @@ export function MyOrdersFeature({ orders, loading, onHideOrder }) {
                     >
                       Detalle
                     </button>
+                    <button
+                      type="button"
+                      className={`orders-repeat-toggle ${repeatPreviewOrderId === order.id ? 'orders-repeat-toggle--active' : ''}`}
+                      onClick={() => setRepeatPreviewOrderId((current) => (current === order.id ? null : order.id))}
+                    >
+                      Repetir pedido
+                    </button>
                     <span className={`orders-status orders-status--${normalizedStatus}`}>
                       {toOrderStatusLabel(order.estado)}
                     </span>
@@ -127,6 +145,31 @@ export function MyOrdersFeature({ orders, loading, onHideOrder }) {
                         <li className="orders-item-details-empty">Sin detalle disponible</li>
                       ) : null}
                     </ul>
+                  ) : null}
+
+                  {repeatPreviewOrderId === order.id ? (
+                    <section className="orders-repeat-preview">
+                      <p className="orders-repeat-preview-title">Repetir este pedido</p>
+                      <ul className="orders-repeat-preview-list">
+                        {(Array.isArray(order.items) ? order.items : []).map((item) => (
+                          <li key={`repeat-${order.id}-${item.id}`}>
+                            <span>{Number(item.quantity || 0)} x</span>
+                            <strong>{item.product_name}</strong>
+                          </li>
+                        ))}
+                        {(Array.isArray(order.items) ? order.items.length : 0) === 0 ? (
+                          <li className="orders-repeat-preview-empty">Sin productos para repetir</li>
+                        ) : null}
+                      </ul>
+                      <div className="orders-repeat-actions">
+                        <button type="button" className="orders-repeat-actions-primary">
+                          Agregar todo al carrito
+                        </button>
+                        <button type="button" className="orders-repeat-actions-secondary">
+                          Editar antes de agregar
+                        </button>
+                      </div>
+                    </section>
                   ) : null}
                 </li>
               );

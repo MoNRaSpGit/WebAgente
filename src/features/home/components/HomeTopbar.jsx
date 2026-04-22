@@ -47,6 +47,13 @@ export function HomeTopbar({
         >
           Mis pedidos
         </button>
+        <button
+          type="button"
+          className={activeView === 'repeat' ? 'home-desktop-nav-active' : ''}
+          onClick={() => onChangeView('repeat')}
+        >
+          Historial
+        </button>
         {isAdmin ? (
           <button
             type="button"

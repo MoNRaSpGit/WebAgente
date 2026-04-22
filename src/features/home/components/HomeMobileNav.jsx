@@ -1,4 +1,4 @@
-import { ClipboardList, House, ShoppingCart } from 'lucide-react';
+import { ClipboardList, House, RefreshCw, ShoppingCart } from 'lucide-react';
 
 export function HomeMobileNav({ activeView, cartCount, onChangeView }) {
   return (
@@ -29,6 +29,14 @@ export function HomeMobileNav({ activeView, cartCount, onChangeView }) {
       >
         <ClipboardList size={18} />
         <span>Mis pedidos</span>
+      </button>
+      <button
+        type="button"
+        className={activeView === 'repeat' ? 'mobile-bottom-nav-active' : ''}
+        onClick={() => onChangeView('repeat')}
+      >
+        <RefreshCw size={18} />
+        <span>Historial</span>
       </button>
     </nav>
   );

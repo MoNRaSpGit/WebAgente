@@ -3,6 +3,7 @@ import { CatalogV2Feature } from '../../features/catalogV2/CatalogV2Feature.jsx'
 import { InactiveProductsFeature } from '../../features/catalog/InactiveProductsFeature.jsx';
 import { CartFeature } from '../../features/orders/CartFeature.jsx';
 import { MyOrdersFeature } from '../../features/orders/MyOrdersFeature.jsx';
+import { RepeatOrdersFeature } from '../../features/orders/RepeatOrdersFeature.jsx';
 import { useWebAuth } from '../../shared/auth/WebAuthProvider.jsx';
 import { HomeMobileNav } from './components/HomeMobileNav.jsx';
 import { HomeTopbar } from './components/HomeTopbar.jsx';
@@ -11,6 +12,7 @@ import { useInactiveProducts } from './hooks/useInactiveProducts.js';
 import { useMyOrdersRealtime } from './hooks/useMyOrdersRealtime.js';
 import { useAdminProductEditor } from './hooks/useAdminProductEditor.js';
 import { useCheckoutOrderFlow } from './hooks/useCheckoutOrderFlow.js';
+import { fetchMyRepeatProducts } from '../../shared/api/webOrdersApi.js';
 
 const CHECKOUT_PREFS_KEY_PREFIX = 'webagente.checkoutPrefs.v1';
 const WHATSAPP_SHIFT_KEY = 'webagente.whatsapp.shift.v1';
@@ -87,6 +89,8 @@ function saveCheckoutPrefs(userId, paymentMethod, deliveryMode) {
 export function HomeFeature() {
   const { profile, user, token, logout } = useWebAuth();
   const [activeWhatsappShift, setActiveWhatsappShift] = useState('morning');
+  const [repeatProducts, setRepeatProducts] = useState([]);
+  const [repeatLoading, setRepeatLoading] = useState(false);
 
   const [myOrders, setMyOrders] = useState([]);
   const [myProfile, setMyProfile] = useState(profile || null);
@@ -244,6 +248,38 @@ export function HomeFeature() {
     }
   }, [activeView, isAdmin]);
 
+  useEffect(() => {
+    if (activeView !== 'repeat' || !token) {
+      return;
+    }
+
+    let cancelled = false;
+    setRepeatLoading(true);
+
+    fetchMyRepeatProducts(token, 10)
+      .then((items) => {
+        if (cancelled) {
+          return;
+        }
+        setRepeatProducts(Array.isArray(items) ? items : []);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+        setError(error.message || 'No se pudo cargar el historial');
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setRepeatLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView, setError, token]);
+
   function increaseProduct(product) {
     setCartItems((current) => {
       const key = String(product.id);
@@ -286,6 +322,27 @@ export function HomeFeature() {
         }
       };
     });
+  }
+
+  function addRecentProductToCart(product) {
+    const productId = Number(product?.product_id || 0);
+    if (!Number.isFinite(productId) || productId <= 0) {
+      return;
+    }
+
+    increaseProduct({
+      id: productId,
+      nombre: String(product?.product_name || '').trim(),
+      precio_venta: Number(product?.unit_price || 0),
+      has_local_image: false
+    });
+  }
+
+  function addAllRecentProductsToCart(products = []) {
+    for (const product of products) {
+      addRecentProductToCart(product);
+    }
+    setActiveView('cart');
   }
 
   return (
@@ -360,6 +417,19 @@ export function HomeFeature() {
               orders={myOrders}
               loading={loading}
               onHideOrder={handleHideOrder}
+            />
+          </section>
+        ) : null}
+
+        {activeView === 'repeat' ? (
+          <section className="orders-shell">
+            <RepeatOrdersFeature
+              products={repeatProducts}
+              loading={repeatLoading}
+              onGoCatalog={() => setActiveView('catalog')}
+              onAddProduct={addRecentProductToCart}
+              onAddAllProducts={addAllRecentProductsToCart}
+              selectedProductIds={cartProductIds}
             />
           </section>
         ) : null}

@@ -88,7 +88,7 @@ function saveCheckoutPrefs(userId, paymentMethod, deliveryMode) {
 
 export function HomeFeature() {
   const { profile, user, token, logout } = useWebAuth();
-  const [activeWhatsappShift, setActiveWhatsappShift] = useState('morning');
+  const [activeWhatsappShift, setActiveWhatsappShift] = useState('night');
   const [repeatProducts, setRepeatProducts] = useState([]);
   const [repeatLoading, setRepeatLoading] = useState(false);
 

@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildWebProductImageSrc } from '../../../shared/api/productsApi.js';
 
-export function ProductImage({ product, priority, prefetchedImageSrc, onImageLoadError, onImageLoaded }) {
+export function ProductImage({
+  product,
+  priority,
+  prefetchedImageSrc,
+  onImageLoadError,
+  onImageLoaded,
+  disableNetworkFetch = false
+}) {
   const hasImage = Boolean(product?.has_local_image);
   const imageUrl = hasImage ? buildWebProductImageSrc(product?.id) : '';
   const [attempt, setAttempt] = useState(0);
@@ -13,12 +20,15 @@ export function ProductImage({ product, priority, prefetchedImageSrc, onImageLoa
     if (usingPrefetched && prefetchedImageSrc) {
       return prefetchedImageSrc;
     }
+    if (disableNetworkFetch) {
+      return '';
+    }
     if (!imageUrl) {
       return '';
     }
     const separator = imageUrl.includes('?') ? '&' : '?';
     return `${imageUrl}${separator}r=${attempt}`;
-  }, [attempt, imageUrl, prefetchedImageSrc, usingPrefetched]);
+  }, [attempt, disableNetworkFetch, imageUrl, prefetchedImageSrc, usingPrefetched]);
 
   useEffect(() => {
     setAttempt(0);
@@ -70,7 +80,7 @@ export function ProductImage({ product, priority, prefetchedImageSrc, onImageLoa
         />
       ) : (
         <div className="product-card-image product-card-image--placeholder">
-          Sin imagen
+          {hasImage ? 'Cargando imagen...' : 'Sin imagen'}
         </div>
       )}
     </div>

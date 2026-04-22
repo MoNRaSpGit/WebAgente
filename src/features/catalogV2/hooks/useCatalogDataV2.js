@@ -60,6 +60,7 @@ export function useCatalogDataV2({
 
   const loadMoreSentinelRef = useRef(null);
   const prefetchedImageCacheRef = useRef(new Map());
+  const prefetchBatchInFlightRef = useRef(false);
 
   const normalizedSearch = useMemo(() => normalizeSearchText(searchTerm), [searchTerm]);
   const searchTokens = useMemo(
@@ -148,14 +149,15 @@ export function useCatalogDataV2({
       .filter((product) => Boolean(product?.has_local_image))
       .map((product) => Number(product?.id || 0))
       .filter((id) => Number.isFinite(id) && id > 0)
-      .slice(0, 24);
+      .slice(0, 12);
 
     const idsToLoad = targetIds.filter((id) => !prefetchedImageCacheRef.current.has(id));
-    if (!idsToLoad.length) {
+    if (!idsToLoad.length || prefetchBatchInFlightRef.current) {
       return;
     }
 
     let cancelled = false;
+    prefetchBatchInFlightRef.current = true;
     fetchWebProductImagesBatch(idsToLoad)
       .then((items) => {
         if (cancelled) {
@@ -194,10 +196,14 @@ export function useCatalogDataV2({
           return next;
         });
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        prefetchBatchInFlightRef.current = false;
+      });
 
     return () => {
       cancelled = true;
+      prefetchBatchInFlightRef.current = false;
     };
   }, [visibleProducts]);
 

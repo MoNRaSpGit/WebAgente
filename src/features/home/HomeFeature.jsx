@@ -13,6 +13,28 @@ import { useAdminProductEditor } from './hooks/useAdminProductEditor.js';
 import { useCheckoutOrderFlow } from './hooks/useCheckoutOrderFlow.js';
 
 const CHECKOUT_PREFS_KEY_PREFIX = 'webagente.checkoutPrefs.v1';
+const WHATSAPP_SHIFT_KEY = 'webagente.whatsapp.shift.v1';
+const WHATSAPP_MORNING_RAW = '099831303';
+const WHATSAPP_NIGHT_RAW = '092945696';
+
+function normalizeUyWhatsappNumber(rawValue) {
+  const digits = String(rawValue || '').replace(/[^\d]/g, '');
+  if (!digits) {
+    return '';
+  }
+
+  if (digits.startsWith('598')) {
+    return digits;
+  }
+  if (digits.startsWith('0') && digits.length >= 9) {
+    return `598${digits.slice(1)}`;
+  }
+  if (digits.length === 8 && digits.startsWith('9')) {
+    return `598${digits}`;
+  }
+
+  return digits;
+}
 
 function buildCheckoutPrefsKey(userId) {
   const parsedId = Number(userId || 0);
@@ -64,7 +86,7 @@ function saveCheckoutPrefs(userId, paymentMethod, deliveryMode) {
 
 export function HomeFeature() {
   const { profile, user, token, logout } = useWebAuth();
-  const manualWhatsappTo = String(import.meta.env.VITE_WHATSAPP_MANUAL_TO || '').replace(/[^\d]/g, '');
+  const [activeWhatsappShift, setActiveWhatsappShift] = useState('morning');
 
   const [myOrders, setMyOrders] = useState([]);
   const [myProfile, setMyProfile] = useState(profile || null);
@@ -117,6 +139,11 @@ export function HomeFeature() {
     && (paymentMethod !== 'puntos' || hasEnoughPoints)
     && (deliveryMode !== 'delivery' || canUseDelivery);
   const isAdmin = String(user?.role || '').toLowerCase() === 'admin';
+  const whatsappTarget = useMemo(
+    () => normalizeUyWhatsappNumber(activeWhatsappShift === 'night' ? WHATSAPP_NIGHT_RAW : WHATSAPP_MORNING_RAW),
+    [activeWhatsappShift]
+  );
+  const whatsappShiftLabel = activeWhatsappShift === 'night' ? 'Noche' : 'Mañana';
   const {
     editingProductId,
     editingForm,
@@ -142,7 +169,7 @@ export function HomeFeature() {
   } = useCheckoutOrderFlow({
     token,
     user,
-    manualWhatsappTo,
+    manualWhatsappTo: whatsappTarget,
     setError,
     setMyOrders,
     setMyProfile,
@@ -193,6 +220,23 @@ export function HomeFeature() {
     window.addEventListener('click', handleWindowClick);
     return () => window.removeEventListener('click', handleWindowClick);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const saved = String(window.localStorage.getItem(WHATSAPP_SHIFT_KEY) || '').trim().toLowerCase();
+    if (saved === 'night' || saved === 'morning') {
+      setActiveWhatsappShift(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.setItem(WHATSAPP_SHIFT_KEY, activeWhatsappShift);
+  }, [activeWhatsappShift]);
 
   useEffect(() => {
     if (!isAdmin && activeView === 'update') {
@@ -259,6 +303,8 @@ export function HomeFeature() {
           onCloseUserMenu={() => setUserMenuOpen(false)}
           userMenuRef={userMenuRef}
           onSendWhatsappManual={handleSendWhatsappManual}
+          whatsappShiftLabel={whatsappShiftLabel}
+          onToggleWhatsappShift={() => setActiveWhatsappShift((current) => (current === 'morning' ? 'night' : 'morning'))}
         />
 
         {activeView === 'catalog' ? (

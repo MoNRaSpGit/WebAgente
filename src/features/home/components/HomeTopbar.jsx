@@ -11,7 +11,9 @@ export function HomeTopbar({
   userMenuOpen,
   onToggleUserMenu,
   onCloseUserMenu,
-  userMenuRef
+  userMenuRef,
+  whatsappShiftLabel,
+  onToggleWhatsappShift
 }) {
   return (
     <header className="home-topbar">
@@ -68,6 +70,18 @@ export function HomeTopbar({
         {userMenuOpen ? (
           <div className="home-user-dropdown">
             <p>{user?.nombre || 'Usuario'}</p>
+            {isAdmin ? (
+              <button
+                type="button"
+                className="home-user-dropdown-manual"
+                onClick={() => {
+                  onCloseUserMenu();
+                  onToggleWhatsappShift?.();
+                }}
+              >
+                Turno: {whatsappShiftLabel || 'Mañana'}
+              </button>
+            ) : null}
             {isAdmin ? (
               <button
                 type="button"

@@ -94,22 +94,6 @@
   font-weight: 700;
 }
 
-.orders-repeat-toggle {
-  border: 1px solid #bcdcc6;
-  background: #f4fbf6;
-  color: #1f7a45;
-  border-radius: 999px;
-  padding: 0.24rem 0.6rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.orders-repeat-toggle--active {
-  border-color: #2ea364;
-  background: #e9f8ee;
-  color: #166534;
-}
-
 .orders-hide-button {
   width: 26px;
   height: 26px;
@@ -169,78 +153,6 @@
 .orders-item-details-empty {
   color: #6b7f95;
   font-size: 0.74rem;
-}
-
-.orders-repeat-preview {
-  margin-top: 0.55rem;
-  border: 1px solid #cae7d5;
-  background: linear-gradient(180deg, #f7fdf9 0%, #edf9f1 100%);
-  border-radius: 10px;
-  padding: 0.55rem;
-}
-
-.orders-repeat-preview-title {
-  margin: 0;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #1f5f3c;
-}
-
-.orders-repeat-preview-list {
-  list-style: none;
-  margin: 0.45rem 0 0;
-  padding: 0;
-  display: grid;
-  gap: 0.28rem;
-}
-
-.orders-repeat-preview-list li {
-  display: flex;
-  gap: 0.35rem;
-  align-items: baseline;
-}
-
-.orders-repeat-preview-list li span {
-  min-width: 34px;
-  color: #1f6d43;
-  font-size: 0.72rem;
-}
-
-.orders-repeat-preview-list li strong {
-  color: #194a2f;
-  font-size: 0.76rem;
-}
-
-.orders-repeat-preview-empty {
-  color: #5c7b69;
-  font-size: 0.74rem;
-}
-
-.orders-repeat-actions {
-  margin-top: 0.55rem;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.35rem;
-}
-
-.orders-repeat-actions-primary,
-.orders-repeat-actions-secondary {
-  border-radius: 8px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 0.35rem 0.42rem;
-}
-
-.orders-repeat-actions-primary {
-  border: 1px solid #2ea364;
-  background: #2ea364;
-  color: #fff;
-}
-
-.orders-repeat-actions-secondary {
-  border: 1px solid #9bcdb0;
-  background: #f2fbf5;
-  color: #1d5e3b;
 }
 
 .orders-status {
@@ -506,6 +418,18 @@
   color: var(--repeat-btn-disabled-color);
 }
 
+.repeat-orders-repeat--selected {
+  border-color: #a7d8bd;
+  background: #ecf9f1;
+  color: #1f7a45;
+}
+
+.repeat-orders-repeat--selected:hover:not(:disabled) {
+  border-color: #8bc9a6;
+  background: #e2f5ea;
+  color: #176038;
+}
+
 .repeat-orders-edit {
   border: 1px solid #9bcdb0;
   background: #f2fbf5;
@@ -529,6 +453,12 @@
   font-size: 0.75rem;
   font-weight: 700;
   padding: 0.45rem 0.6rem;
+}
+
+.repeat-orders-add-all:disabled {
+  border-color: #c3d3e4;
+  background: #ebf2f9;
+  color: #7a8ca0;
 }
 
   .repeat-orders-footer-note {

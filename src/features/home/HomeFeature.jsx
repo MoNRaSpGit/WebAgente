@@ -427,9 +427,7 @@ export function HomeFeature() {
               products={repeatProducts}
               loading={repeatLoading}
               onGoCatalog={() => setActiveView('catalog')}
-              onAddProduct={addRecentProductToCart}
               onAddAllProducts={addAllRecentProductsToCart}
-              selectedProductIds={cartProductIds}
             />
           </section>
         ) : null}

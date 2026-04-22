@@ -2,6 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { WebLoginCard } from '../features/auth/components/WebLoginCard.jsx';
 import { HomeFeature } from '../features/home/HomeFeature.jsx';
 import { WebAuthProvider, useWebAuth } from '../shared/auth/WebAuthProvider.jsx';
+import {
+  getPublicCatalogPreloadSnapshot,
+  startCatalogImagesPreloadFromProducts,
+  startPublicCatalogPreload
+} from '../features/home/homePreload.js';
 
 const SPLASH_MIN_VISIBLE_MS = 4000;
 
@@ -29,6 +34,33 @@ function AppContent() {
   const { loading, isAuthenticated } = useWebAuth();
   const [showLaunch, setShowLaunch] = useState(true);
   const splashStartedAt = useRef(Date.now());
+
+  useEffect(() => {
+    // Stage 1: precarga publica durante splash.
+    startPublicCatalogPreload()
+      .then((snapshot) => {
+        // Stage 2: mientras esta login visible, avanzamos con imagenes iniciales.
+        startCatalogImagesPreloadFromProducts(snapshot?.products || []).catch(() => {});
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      return;
+    }
+    // Mantener precarga activa tambien en pantalla de login.
+    const snapshot = getPublicCatalogPreloadSnapshot();
+    if (snapshot?.products?.length) {
+      startCatalogImagesPreloadFromProducts(snapshot.products).catch(() => {});
+      return;
+    }
+    startPublicCatalogPreload()
+      .then((nextSnapshot) => {
+        startCatalogImagesPreloadFromProducts(nextSnapshot?.products || []).catch(() => {});
+      })
+      .catch(() => {});
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (loading) {

@@ -11,6 +11,12 @@ import {
   WEB_PRODUCTS_PAGE_LIMIT
 } from '../../home/home.constants.js';
 import { normalizeSearchText } from '../../home/home.utils.js';
+import {
+  getImagePreloadMapForProducts,
+  getPublicCatalogPreloadSnapshot,
+  startCatalogImagesPreloadFromProducts,
+  startPublicCatalogPreload
+} from '../../home/homePreload.js';
 
 const PRODUCT_NAME_COLLATOR = new Intl.Collator('es', {
   sensitivity: 'base',
@@ -253,6 +259,44 @@ export function useCatalogDataV2({
         setError('');
         const startAt = performance.now();
 
+        // Stage 3: reutilizamos precarga de splash/login si existe.
+        const preloadSnapshot = getPublicCatalogPreloadSnapshot();
+        const preloadProducts = Array.isArray(preloadSnapshot?.products) ? preloadSnapshot.products : [];
+        const preloadCategories = Array.isArray(preloadSnapshot?.categories) ? preloadSnapshot.categories : [];
+
+        if (preloadProducts.length > 0 && mounted) {
+          setProducts(uniqueByProductId(preloadProducts));
+          setVisibleProductsCount(WEB_PRODUCTS_FIRST_VISIBLE_COUNT);
+
+          const uniquePreloadCategories = [];
+          const seenPreloadCategories = new Set();
+          for (const category of preloadCategories) {
+            const name = String(category || '').trim();
+            const key = compactCategory(name);
+            if (!name || !key || seenPreloadCategories.has(key)) {
+              continue;
+            }
+            seenPreloadCategories.add(key);
+            uniquePreloadCategories.push(name);
+          }
+          if (uniquePreloadCategories.length > 0) {
+            setKnownCategories(uniquePreloadCategories);
+          }
+
+          const preloadImageMap = getImagePreloadMapForProducts(preloadProducts);
+          if (Object.keys(preloadImageMap).length > 0) {
+            setPrefetchedImageMap((current) => ({ ...current, ...preloadImageMap }));
+            for (const [key, value] of Object.entries(preloadImageMap)) {
+              const id = Number(key);
+              if (Number.isFinite(id) && id > 0 && value) {
+                prefetchedImageCacheRef.current.set(id, value);
+              }
+            }
+          }
+
+          setLoading(false);
+        }
+
         const bootstrapPromise = Promise.all([
           fetchWebCategories({ status: 'activo' }).catch(() => []),
           fetchMyWebOrders(token, 20).catch(() => []),
@@ -291,6 +335,9 @@ export function useCatalogDataV2({
         onBootstrapProfile?.(profileData);
         setLastFetchMs(Math.round(performance.now() - startAt));
         setLoading(false);
+
+        startPublicCatalogPreload().catch(() => {});
+        startCatalogImagesPreloadFromProducts(uniqueProducts).catch(() => {});
 
         const canHydrateMore = Boolean(firstPageResult?.page?.has_more) && firstPageItems.length > 0;
         if (canHydrateMore) {

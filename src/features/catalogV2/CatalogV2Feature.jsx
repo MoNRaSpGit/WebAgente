@@ -5,6 +5,7 @@ import { ProductImage } from './components/ProductImage.jsx';
 export function CatalogV2Feature({
   products,
   productsTotal,
+  prefetchedImageMap,
   loading,
   loadingMore,
   error,
@@ -23,6 +24,7 @@ export function CatalogV2Feature({
   loadMoreSentinelRef
 }) {
   const [toastMessage, setToastMessage] = useState('');
+  const [loadedImageIds, setLoadedImageIds] = useState(() => new Set());
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [beveragesExpanded, setBeveragesExpanded] = useState(false);
   const toastTimeoutRef = useRef(null);
@@ -93,6 +95,37 @@ export function CatalogV2Feature({
       hasBeverageGroup: Boolean(beveragesRoot || beveragesChildren.length > 0)
     };
   }, [categories]);
+
+  const productsOrderedByLoadedImage = useMemo(() => {
+    const list = Array.isArray(products) ? [...products] : [];
+    list.sort((a, b) => {
+      const aLoaded = loadedImageIds.has(Number(a?.id || 0)) ? 1 : 0;
+      const bLoaded = loadedImageIds.has(Number(b?.id || 0)) ? 1 : 0;
+      if (aLoaded !== bLoaded) {
+        return bLoaded - aLoaded;
+      }
+      return 0;
+    });
+    return list;
+  }, [loadedImageIds, products]);
+
+  useEffect(() => {
+    const validIds = new Set(
+      products
+        .map((product) => Number(product?.id || 0))
+        .filter((id) => Number.isFinite(id) && id > 0)
+    );
+
+    setLoadedImageIds((current) => {
+      const next = new Set();
+      for (const id of current) {
+        if (validIds.has(id)) {
+          next.add(id);
+        }
+      }
+      return next;
+    });
+  }, [products]);
 
   useEffect(() => {
     const isActiveOnBeverages = activeCategory === groupedCategories.beveragesRoot
@@ -254,11 +287,26 @@ export function CatalogV2Feature({
       {!loading && !error ? (
         <>
           <ul className="products-grid">
-            {products.map((product, index) => (
+            {productsOrderedByLoadedImage.map((product, index) => (
               <li key={product.id} className="product-card">
                 <ProductImage
                   product={product}
                   priority={index < 12}
+                  prefetchedImageSrc={prefetchedImageMap?.[product.id] || ''}
+                  onImageLoaded={(productId) => {
+                    const id = Number(productId || 0);
+                    if (!Number.isFinite(id) || id <= 0) {
+                      return;
+                    }
+                    setLoadedImageIds((current) => {
+                      if (current.has(id)) {
+                        return current;
+                      }
+                      const next = new Set(current);
+                      next.add(id);
+                      return next;
+                    });
+                  }}
                 />
                 <strong className="product-card-name">{product.nombre}</strong>
                 <span className="product-card-price">${Number(product.precio_venta || 0).toFixed(2)}</span>

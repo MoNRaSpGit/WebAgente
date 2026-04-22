@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { fetchWebCategories, fetchWebProducts } from '../../../shared/api/productsApi.js';
+import { fetchWebCategories, fetchWebProductImagesBatch, fetchWebProducts } from '../../../shared/api/productsApi.js';
 import { fetchMyWebOrders } from '../../../shared/api/webOrdersApi.js';
 import { fetchMyWebProfile } from '../../../shared/api/webUsersApi.js';
 import {
@@ -56,8 +56,10 @@ export function useCatalogDataV2({
   const [lastFetchMs, setLastFetchMs] = useState(0);
   const [knownCategories, setKnownCategories] = useState([]);
   const [visibleProductsCount, setVisibleProductsCount] = useState(WEB_PRODUCTS_FIRST_VISIBLE_COUNT);
+  const [prefetchedImageMap, setPrefetchedImageMap] = useState({});
 
   const loadMoreSentinelRef = useRef(null);
+  const prefetchedImageCacheRef = useRef(new Map());
 
   const normalizedSearch = useMemo(() => normalizeSearchText(searchTerm), [searchTerm]);
   const searchTokens = useMemo(
@@ -121,6 +123,83 @@ export function useCatalogDataV2({
     () => filteredProducts.slice(0, visibleProductsCount),
     [filteredProducts, visibleProductsCount]
   );
+
+  useEffect(() => {
+    const validVisibleIds = new Set(
+      visibleProducts
+        .map((product) => Number(product?.id || 0))
+        .filter((id) => Number.isFinite(id) && id > 0)
+    );
+
+    setPrefetchedImageMap((current) => {
+      const next = {};
+      for (const [key, value] of Object.entries(current)) {
+        const id = Number(key);
+        if (validVisibleIds.has(id)) {
+          next[id] = value;
+        }
+      }
+      return next;
+    });
+  }, [visibleProducts]);
+
+  useEffect(() => {
+    const targetIds = visibleProducts
+      .filter((product) => Boolean(product?.has_local_image))
+      .map((product) => Number(product?.id || 0))
+      .filter((id) => Number.isFinite(id) && id > 0)
+      .slice(0, 24);
+
+    const idsToLoad = targetIds.filter((id) => !prefetchedImageCacheRef.current.has(id));
+    if (!idsToLoad.length) {
+      return;
+    }
+
+    let cancelled = false;
+    fetchWebProductImagesBatch(idsToLoad)
+      .then((items) => {
+        if (cancelled) {
+          return;
+        }
+
+        let changed = false;
+        for (const item of items) {
+          const productId = Number(item?.product_id || 0);
+          const mimeType = String(item?.mime_type || '').trim() || 'image/jpeg';
+          const dataBase64 = String(item?.data_base64 || '').trim();
+          if (!Number.isFinite(productId) || productId <= 0 || !dataBase64) {
+            continue;
+          }
+
+          const dataUrl = `data:${mimeType};base64,${dataBase64}`;
+          if (prefetchedImageCacheRef.current.get(productId) === dataUrl) {
+            continue;
+          }
+          prefetchedImageCacheRef.current.set(productId, dataUrl);
+          changed = true;
+        }
+
+        if (!changed) {
+          return;
+        }
+
+        setPrefetchedImageMap((current) => {
+          const next = { ...current };
+          for (const productId of targetIds) {
+            const imageDataUrl = prefetchedImageCacheRef.current.get(productId);
+            if (imageDataUrl) {
+              next[productId] = imageDataUrl;
+            }
+          }
+          return next;
+        });
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visibleProducts]);
 
   useEffect(() => {
     let mounted = true;
@@ -288,6 +367,15 @@ export function useCatalogDataV2({
         return exists ? current : [...current, nextCategory];
       });
     }
+
+    if (Object.prototype.hasOwnProperty.call(patch, 'has_local_image') && !patch.has_local_image) {
+      prefetchedImageCacheRef.current.delete(parsedId);
+      setPrefetchedImageMap((current) => {
+        const next = { ...current };
+        delete next[parsedId];
+        return next;
+      });
+    }
   }
 
   return {
@@ -303,6 +391,7 @@ export function useCatalogDataV2({
     productsLoadingMore: visibleProductsCount < filteredProducts.length,
     filteredProducts,
     visibleProducts,
+    prefetchedImageMap,
     loadMoreSentinelRef,
     applyLocalProductPatch
   };

@@ -73,6 +73,31 @@ export async function fetchWebCategories({ status = 'activo' } = {}) {
   return Array.isArray(data.items) ? data.items : [];
 }
 
+export async function fetchWebProductImagesBatch(ids = []) {
+  const cleanIds = Array.isArray(ids)
+    ? [...new Set(ids.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0))].slice(0, 40)
+    : [];
+
+  if (!cleanIds.length) {
+    return [];
+  }
+
+  const response = await fetchApi('/api/web/products/images/batch', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ ids: cleanIds })
+  });
+
+  const data = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudieron cargar imagenes en batch');
+  }
+
+  return Array.isArray(data.items) ? data.items : [];
+}
+
 export async function fetchWebAdminProductById(token, productId) {
   const response = await fetchApi(`/api/web/admin/products/${Number(productId)}`, {
     headers: {

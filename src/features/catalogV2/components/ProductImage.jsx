@@ -1,24 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildWebProductImageSrc } from '../../../shared/api/productsApi.js';
 
-export function ProductImage({ product, priority, onImageLoadError, onImageLoaded }) {
+export function ProductImage({ product, priority, prefetchedImageSrc, onImageLoadError, onImageLoaded }) {
   const hasImage = Boolean(product?.has_local_image);
   const imageUrl = hasImage ? buildWebProductImageSrc(product?.id) : '';
   const [attempt, setAttempt] = useState(0);
   const [hasError, setHasError] = useState(false);
+  const [usingPrefetched, setUsingPrefetched] = useState(Boolean(prefetchedImageSrc));
   const retryTimeoutRef = useRef(null);
 
   const imageSrc = useMemo(() => {
+    if (usingPrefetched && prefetchedImageSrc) {
+      return prefetchedImageSrc;
+    }
     if (!imageUrl) {
       return '';
     }
     const separator = imageUrl.includes('?') ? '&' : '?';
     return `${imageUrl}${separator}r=${attempt}`;
-  }, [attempt, imageUrl]);
+  }, [attempt, imageUrl, prefetchedImageSrc, usingPrefetched]);
 
   useEffect(() => {
     setAttempt(0);
     setHasError(false);
+    setUsingPrefetched(Boolean(prefetchedImageSrc));
   }, [imageUrl, product?.id]);
 
   useEffect(() => () => {
@@ -48,6 +53,11 @@ export function ProductImage({ product, priority, onImageLoadError, onImageLoade
             onImageLoaded?.(Number(product?.id || 0));
           }}
           onError={() => {
+            if (usingPrefetched) {
+              setUsingPrefetched(false);
+              setAttempt(0);
+              return;
+            }
             if (attempt < 2) {
               const nextAttempt = attempt + 1;
               retryTimeoutRef.current = window.setTimeout(() => {

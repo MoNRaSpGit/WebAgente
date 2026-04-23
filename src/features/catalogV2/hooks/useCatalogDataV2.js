@@ -156,7 +156,7 @@ export function useCatalogDataV2({
       .filter((product) => Boolean(product?.has_local_image))
       .map((product) => Number(product?.id || 0))
       .filter((id) => Number.isFinite(id) && id > 0)
-      .slice(0, 36);
+      .slice(0, 24);
 
     const idsToLoad = targetIds.filter((id) => !prefetchedImageCacheRef.current.has(id));
     if (!idsToLoad.length || prefetchBatchInFlightRef.current) {

@@ -115,6 +115,7 @@ export function HomeFeature() {
     filteredProducts,
     visibleProducts,
     prefetchedImageMap,
+    isPrefetchingImages,
     loadMoreSentinelRef,
     applyLocalProductPatch
   } = useCatalogDataV2({
@@ -370,6 +371,7 @@ export function HomeFeature() {
             products={visibleProducts}
             productsTotal={filteredProducts.length}
             prefetchedImageMap={prefetchedImageMap}
+            isPrefetchingImages={isPrefetchingImages}
             loading={loading}
             loadingMore={productsLoadingMore}
             error={error}

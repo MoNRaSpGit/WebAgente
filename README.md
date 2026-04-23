@@ -2,6 +2,11 @@
 
 Frontend web publico separado de `FrontAgente`.
 
+## Documentacion relacionada
+
+- Web (este archivo): [WebAgente/README.md](C:\Users\ju4nr\OneDrive\Desktop\PilotoAgente\WebAgente\README.md)
+- Backend de la parte web: [BackAgente/README.md](C:\Users\ju4nr\OneDrive\Desktop\PilotoAgente\BackAgente\README.md)
+
 ## Inicio rapido
 
 ```bash
@@ -118,3 +123,12 @@ Referencia para volver al punto estable anterior al ajuste de carga progresiva d
 Comportamiento tecnico:
 - En `5850742`: bootstrap mas bloqueante (carga mas paginas antes de mostrar completo).
 - En `f14c91f`: primera pagina rapida + hidratacion en background.
+
+## Estado funcional actual
+
+- Registro/login web habilitado.
+- Catalogo activo con filtro por categoria, busqueda y carga de imagenes por batch + fallback.
+- Carrito y envio de pedido funcionando.
+- Mis pedidos (detalle, estado y ocultar pedido entregado) funcionando.
+- Historial (repetir/seleccionar productos frecuentes) funcionando.
+- Integracion WhatsApp manual (turno manana/noche) funcionando.

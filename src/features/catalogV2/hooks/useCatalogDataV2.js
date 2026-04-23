@@ -63,6 +63,7 @@ export function useCatalogDataV2({
   const [knownCategories, setKnownCategories] = useState([]);
   const [visibleProductsCount, setVisibleProductsCount] = useState(WEB_PRODUCTS_FIRST_VISIBLE_COUNT);
   const [prefetchedImageMap, setPrefetchedImageMap] = useState({});
+  const [isPrefetchingImages, setIsPrefetchingImages] = useState(false);
 
   const loadMoreSentinelRef = useRef(null);
   const prefetchedImageCacheRef = useRef(new Map());
@@ -155,7 +156,7 @@ export function useCatalogDataV2({
       .filter((product) => Boolean(product?.has_local_image))
       .map((product) => Number(product?.id || 0))
       .filter((id) => Number.isFinite(id) && id > 0)
-      .slice(0, 12);
+      .slice(0, 36);
 
     const idsToLoad = targetIds.filter((id) => !prefetchedImageCacheRef.current.has(id));
     if (!idsToLoad.length || prefetchBatchInFlightRef.current) {
@@ -164,6 +165,7 @@ export function useCatalogDataV2({
 
     let cancelled = false;
     prefetchBatchInFlightRef.current = true;
+    setIsPrefetchingImages(true);
     fetchWebProductImagesBatch(idsToLoad)
       .then((items) => {
         if (cancelled) {
@@ -205,11 +207,15 @@ export function useCatalogDataV2({
       .catch(() => {})
       .finally(() => {
         prefetchBatchInFlightRef.current = false;
+        if (!cancelled) {
+          setIsPrefetchingImages(false);
+        }
       });
 
     return () => {
       cancelled = true;
       prefetchBatchInFlightRef.current = false;
+      setIsPrefetchingImages(false);
     };
   }, [visibleProducts]);
 
@@ -445,6 +451,7 @@ export function useCatalogDataV2({
     filteredProducts,
     visibleProducts,
     prefetchedImageMap,
+    isPrefetchingImages,
     loadMoreSentinelRef,
     applyLocalProductPatch
   };

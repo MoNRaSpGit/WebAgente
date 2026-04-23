@@ -29,6 +29,7 @@ export function ProductImage({
   product,
   priority,
   prefetchedImageSrc,
+  holdFallback = false,
   onImageLoadError,
   onImageLoaded,
   disableNetworkFetch = false
@@ -84,7 +85,7 @@ export function ProductImage({
   }, [hasError, onImageLoadError, product?.id]);
 
   useEffect(() => {
-    if (usingPrefetched || disableNetworkFetch || !hasImage || hasError || fallbackSlotReady) {
+    if (usingPrefetched || disableNetworkFetch || holdFallback || !hasImage || hasError || fallbackSlotReady) {
       return;
     }
 
@@ -104,7 +105,7 @@ export function ProductImage({
     return () => {
       cancelled = true;
     };
-  }, [disableNetworkFetch, fallbackSlotReady, hasError, hasImage, usingPrefetched]);
+  }, [disableNetworkFetch, fallbackSlotReady, hasError, hasImage, holdFallback, usingPrefetched]);
 
   return (
     <div className="product-card-image-wrap">
